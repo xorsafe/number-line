@@ -2,10 +2,11 @@
   "name": "number-line",
   "version": "0.0.1",
   "description": "A virtually inifinite number line that can be used by any renderer",
-  "source": "src/index.ts",
+  "source": "src/number-line.ts",
   "main": "dist/main.js",
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+	"build": "parcel build"
   },
   "keywords": [
     "number line",
@@ -18,7 +19,7 @@
     "graph"
   ],
   "author": "",
-  "license": "ISC",
+  "license": "mit",
   "devDependencies": {
     "@babel/core": "^7.18.6",
     "@babel/preset-env": "^7.18.6",
