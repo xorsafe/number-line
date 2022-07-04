@@ -1,38 +1,25 @@
 {
   "name": "number-line",
-  "version": "0.0.1",
-  "description": "A customizable & virtually inifinite number line that can be used by any renderer",
-  "source": "src/number-line.ts",
-  "main": "dist/main.js",
-  "module": "dist/number-line.js",
-  "types": "dist/number-line.d.ts",
+  "version": "1.0.0",
+  "description": "",
+  "source": "src/index.html",
   "scripts": {
-    "test": "jest",
-    "build": "parcel build"
+	"start":"parcel",
+	"build":"parcel build",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [
-    "number line",
-    "maths",
-	"graphics",
-    "render",
-    "equation",
-    "visualization",
-    "viz",
-    "infographics",
-    "graph"
-  ],
-  "author": "nikhilnxvverma1",
-  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nikhilnxvverma1/number-line.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nikhilnxvverma1/number-line/issues"
+  },
+  "homepage": "https://github.com/nikhilnxvverma1/number-line#readme",
   "devDependencies": {
-    "@babel/core": "^7.18.6",
-    "@babel/preset-env": "^7.18.6",
-    "@babel/preset-typescript": "^7.18.6",
-    "@parcel/packager-ts": "^2.6.2",
-    "@parcel/transformer-typescript-types": "^2.6.2",
-    "@types/jest": "^28.1.4",
-    "babel-jest": "^28.1.2",
-    "jest": "^28.1.2",
-    "parcel": "^2.6.2",
-    "typescript": "^4.7.4"
+    "parcel": "^2.6.2"
   }
 }

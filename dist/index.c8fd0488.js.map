@@ -1,0 +1,1 @@
+{"mappings":"AAAA,MAAM,QAAQ,GAAS,MAAM,AAAC;AAC9B,OAAO,CAAC,GAAG,CAAC,QAAQ,CAAC,CAAC","sources":["src/what.ts"],"sourcesContent":["const myString:string =\"asdf\";\nconsole.log(myString);"],"names":[],"version":3,"file":"index.c8fd0488.js.map","sourceRoot":"/__parcel_source_root/"}
