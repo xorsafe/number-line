@@ -1,7 +1,7 @@
 {
   "name": "number-line",
   "version": "0.0.1",
-  "description": "A virtually inifinite number line that can be used by any renderer",
+  "description": "A customizable & virtually inifinite number line that can be used by any renderer",
   "source": "src/number-line.ts",
   "main": "dist/main.js",
   "module": "dist/number-line.js",
@@ -21,8 +21,8 @@
     "infographics",
     "graph"
   ],
-  "author": "",
-  "license": "mit",
+  "author": "nikhilnxvverma1",
+  "license": "MIT",
   "devDependencies": {
     "@babel/core": "^7.18.6",
     "@babel/preset-env": "^7.18.6",
