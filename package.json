@@ -2,10 +2,10 @@
   "name": "number-line",
   "version": "1.0.0",
   "description": "",
-  "source": "src/index.html",
+  "source": "src/index.hbs",
   "scripts": {
-    "start": "parcel",
-    "build": "parcel build",
+    "start": "parcel src/index.hbs",
+    "build": "parcel build src/index.hbs",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -21,7 +21,9 @@
   "homepage": "https://github.com/nikhilnxvverma1/number-line#readme",
   "devDependencies": {
     "parcel": "^2.6.2",
+    "parcel-plugin-handlebars": "^0.4.4",
     "postcss": "^8.4.14",
-    "tailwindcss": "^3.1.4"
+    "tailwindcss": "^3.1.4",
+    "typescript": "^4.7.4"
   }
 }
