@@ -1,2 +1,2 @@
-const myString:string ="asdf";
+const myString:string ="asdfa";
 console.log(myString);
