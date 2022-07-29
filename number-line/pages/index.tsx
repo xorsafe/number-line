@@ -24,14 +24,18 @@ const numberScale:NumberLine = new NumberLine({
 
 })
 
-interface NumberLineState{
+interface NumberLineProps{
 	model:NumberLineViewModel;
 }
+interface NumberLineState{
+	model:NumberLineViewModel;
+	icon:'cursor-grab'|'cursor-grabbing';
+}
 
-class NumberScaleTickMarks extends React.Component<NumberLineState,NumberLineState>{
+class NumberScaleTickMarks extends React.Component<NumberLineProps,NumberLineState>{
 	constructor(props:NumberLineState){
 		super(props);
-		this.state = {model:props.model}
+		this.state = {model:props.model, icon:'cursor-grab'}
 	}
 
 	private tickMarkLeftClassName(v:TickMarkViewModel):string{
@@ -50,8 +54,9 @@ class NumberScaleTickMarks extends React.Component<NumberLineState,NumberLineSta
 
 	render(): React.ReactNode {
 		let keyCounter=0;
+		// This example uses tailwind ^3.1.6
 		return (
-			<div className='flex items-end' style={{columnGap:this.state.model.gap-1}}>
+			<div className={'flex items-end select-none'} style={{columnGap:this.state.model.gap-1}}>
 				{
 					this.state.model.tickMarks.map((v,i,tvm)=>{
 						if(v.patternIndex==0){
@@ -79,7 +84,10 @@ class Home extends React.Component {
 	resizeElement:React.RefObject<HTMLDivElement> = createRef();
 	numberLineContainer:React.RefObject<NumberScaleTickMarks> = createRef();
 
+	containerWidth!:number;
 	numberLineViewModel!:NumberLineViewModel;
+	private isDown = false;
+	private lastX!:number;
 
 	constructor(props:any){
 		super(props);
@@ -92,8 +100,12 @@ class Home extends React.Component {
 		this.resizeObserver = new ResizeObserver((entries)=>{
 			
 			for (let entry of entries) {
-				console.log("Rebuilding number line view model for width "+entry.contentRect.width);
-				this.numberLineContainer.current?.setState({model:numberScale.buildViewModel(entry.contentRect.width)})
+				if(entry.target==this.resizeElement.current){
+					this.containerWidth = entry.contentRect.width;
+					console.log("Rebuilding number line view model for width "+this.containerWidth);
+					this.numberLineContainer.current?.setState({model:numberScale.buildViewModel(this.containerWidth)})
+					break;
+				}
 			}
 		});
 
@@ -109,6 +121,8 @@ class Home extends React.Component {
 	}
 
 	render(): React.ReactNode {
+		const handIcon = this.isDown?'cursor-grabbing':'cursor-grab';
+		console.log("hand icon",handIcon);
 		return (
 			<>
 				<Layout home>
@@ -118,16 +132,42 @@ class Home extends React.Component {
 					<section className={'text-center '+utilStyles.headingMd}>
 						<p>Virtually infinite,pannable,zoomable and completely customizable</p>
 						<p>
-						Drag the number line below with your mouse/trackpad. Ctrl + Mousewheel for zooming
+						Use mouse wheel to pan the number line. Ctrl + Mouse wheel to zoom
 						</p>
 						<a href="https://github.com/nikhilnxvverma1/number-line">Github</a>
 					</section>
 				</Layout>
-				<div ref={this.resizeElement} className="w-full h-12 flex flex-col justify-end bg-slate-50">
+				<div 
+				ref={this.resizeElement} 
+				onMouseDown={this.mouseDown}
+				onMouseMove={this.mouseMove}
+				onMouseUp={this.mouseUp}
+				className={"w-full h-12 flex flex-col justify-end bg-slate-50 "+handIcon}>
 					<NumberScaleTickMarks ref={this.numberLineContainer} model={this.numberLineViewModel}></NumberScaleTickMarks>
 				</div>
 			</>
 	  )
+	}
+	
+	mouseDown = (event:React.MouseEvent<HTMLDivElement>)=>{
+		console.log("Down");
+		this.isDown = true;
+		this.lastX = event.clientX;
+	}
+	
+	mouseMove = (event:React.MouseEvent<HTMLDivElement>)=>{
+		if(this.isDown){
+			console.log("Move");
+			const delta = event.clientX - this.lastX;
+			this.lastX = event.clientX;
+			numberScale.moveBy(-delta);
+			this.numberLineContainer.current?.setState({model:numberScale.buildViewModel(this.containerWidth)})
+		}
+	}
+
+	mouseUp = (event:React.MouseEvent<HTMLDivElement>)=>{
+		console.log("Up");
+		this.isDown = false;
 	}
 	
 }
