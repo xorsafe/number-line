@@ -198,19 +198,19 @@ export class NumberLine{
 		let firstTickMarkIndex:number;
 		let firstTickMarkPosition:number;
 		let totalNegativeTicks:number;
+		let tickCountsTillFirstTick!:number;
 		if(this.displacement>=0){
-			const tickCountsTillFirstTick = Math.ceil((this.displacement/unitLength)*this.tickCount)
+			tickCountsTillFirstTick = Math.ceil((this.displacement/unitLength)*this.tickCount)
 			firstTickMarkValue = tickCountsTillFirstTick*tickValue;
 			firstTickMarkIndex = tickCountsTillFirstTick % this.tickCount;
-			firstTickMarkPosition = tickCountsTillFirstTick*tickGap - this.displacement;
 			totalNegativeTicks = 0;
 		}else{
-			const tickCountsTillFirstTick = Math.floor((-this.displacement/unitLength)*this.tickCount)
-			totalNegativeTicks = tickCountsTillFirstTick;
-			firstTickMarkValue = -tickCountsTillFirstTick*tickValue;
-			firstTickMarkIndex = this.tickCount - tickCountsTillFirstTick % this.tickCount - 1;
-			firstTickMarkPosition = tickCountsTillFirstTick*tickGap - this.displacement;
+			tickCountsTillFirstTick = Math.floor((this.displacement/unitLength)*this.tickCount)
+			totalNegativeTicks = -tickCountsTillFirstTick;
+			firstTickMarkValue = tickCountsTillFirstTick*tickValue;
+			firstTickMarkIndex = totalNegativeTicks % this.tickCount;
 		}
+		firstTickMarkPosition = tickCountsTillFirstTick*tickGap - this.displacement;
 
 		const totalTicks = Math.floor((length - firstTickMarkPosition)/tickGap);
 		const leftoverSpace = length - totalTicks*tickGap;
@@ -225,7 +225,6 @@ export class NumberLine{
 			tickMarks:[],
 			gap:tickGap
 		}
-
 		
 		for (let i = 0,
 			currentTickValue = firstTickMarkValue,

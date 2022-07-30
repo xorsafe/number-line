@@ -1,7 +1,5 @@
-import { AppPropsType } from 'next/dist/shared/lib/utils';
 import Head from 'next/head';
-import { ScriptProps } from 'next/script';
-import React, { createRef, ReactNode } from 'react';
+import React, { createRef } from 'react';
 import Layout, { siteTitle } from '../components/layout';
 import utilStyles from '../styles/utils.module.css';
 import { NumberLine, ITickMarkLabelStrategy, NumberLineViewModel, TickMarkViewModel} from './my-number-line';
@@ -16,7 +14,7 @@ const numberScaleTickMarkStrategy:ITickMarkLabelStrategy={
 }
 const numberScale:NumberLine = new NumberLine({
 	baseLength:1000,
-	baseCoverage:1000,
+	baseCoverage:100,
 	breakpointLowerbound:20,
 	breakpointUpperBound:40,
 	labelStrategy:numberScaleTickMarkStrategy,
@@ -142,17 +140,23 @@ class Home extends React.Component {
 				onMouseDown={this.mouseDown}
 				onMouseMove={this.mouseMove}
 				onMouseUp={this.mouseUp}
-				className={"w-full h-12 flex flex-col justify-end bg-slate-50 "+handIcon}>
+				onMouseLeave={this.mouseOut}
+				className={"w-full h-20 flex flex-col justify-end bg-slate-50 "+handIcon}>
 					<NumberScaleTickMarks ref={this.numberLineContainer} model={this.numberLineViewModel}></NumberScaleTickMarks>
 				</div>
 			</>
 	  )
+	}
+
+	mouseOut=(event:React.MouseEvent<HTMLDivElement>)=>{
+		this.isDown = false;
 	}
 	
 	mouseDown = (event:React.MouseEvent<HTMLDivElement>)=>{
 		console.log("Down");
 		this.isDown = true;
 		this.lastX = event.clientX;
+		event.stopPropagation();
 	}
 	
 	mouseMove = (event:React.MouseEvent<HTMLDivElement>)=>{
@@ -163,11 +167,13 @@ class Home extends React.Component {
 			numberScale.moveBy(-delta);
 			this.numberLineContainer.current?.setState({model:numberScale.buildViewModel(this.containerWidth)})
 		}
+		event.stopPropagation();
 	}
 
 	mouseUp = (event:React.MouseEvent<HTMLDivElement>)=>{
 		console.log("Up");
 		this.isDown = false;
+		event.stopPropagation();
 	}
 	
 }
