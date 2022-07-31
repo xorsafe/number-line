@@ -16,7 +16,7 @@ const numberScale:NumberLine = new NumberLine({
 	baseLength:1000,
 	baseCoverage:100,
 	breakpointLowerbound:20,
-	breakpointUpperBound:40,
+	breakpointUpperBound:100,
 	labelStrategy:numberScaleTickMarkStrategy,
 	pattern:[3,1,1,1,1,2,1,1,1,1],
 
@@ -108,7 +108,7 @@ class Home extends React.Component {
 		});
 
 		this.resizeObserver.observe(this.resizeElement.current!);
-
+		this.resizeElement.current?.addEventListener('wheel',this.zoom,{passive:false})
 		
 	}
 
@@ -116,11 +116,11 @@ class Home extends React.Component {
 		if(this.resizeObserver){
 			this.resizeObserver.disconnect();
 		}
+		this.resizeElement.current?.removeEventListener('wheel',this.zoom);// TODO last argument missing
 	}
 
 	render(): React.ReactNode {
-		const handIcon = this.isDown?'cursor-grabbing':'cursor-grab';
-		console.log("hand icon",handIcon);
+		
 		return (
 			<>
 				<Layout home>
@@ -137,15 +137,24 @@ class Home extends React.Component {
 				</Layout>
 				<div 
 				ref={this.resizeElement} 
+				
 				onMouseDown={this.mouseDown}
 				onMouseMove={this.mouseMove}
 				onMouseUp={this.mouseUp}
 				onMouseLeave={this.mouseOut}
-				className={"w-full h-20 flex flex-col justify-end bg-slate-50 "+handIcon}>
+				className={"w-full h-20 flex flex-col justify-end bg-slate-50 cursor-grab"}>
 					<NumberScaleTickMarks ref={this.numberLineContainer} model={this.numberLineViewModel}></NumberScaleTickMarks>
 				</div>
 			</>
 	  )
+	}
+
+	zoom=(event:WheelEvent)=>{
+		const delta = event.deltaY*0.01;
+		numberScale.zoomAround(delta,event.x);
+		console.log("delta",delta,'event',event);
+		this.numberLineContainer.current?.setState({model:numberScale.buildViewModel(this.containerWidth)})
+		event.preventDefault();
 	}
 
 	mouseOut=(event:React.MouseEvent<HTMLDivElement>)=>{
@@ -153,7 +162,6 @@ class Home extends React.Component {
 	}
 	
 	mouseDown = (event:React.MouseEvent<HTMLDivElement>)=>{
-		console.log("Down");
 		this.isDown = true;
 		this.lastX = event.clientX;
 		event.stopPropagation();
@@ -161,7 +169,6 @@ class Home extends React.Component {
 	
 	mouseMove = (event:React.MouseEvent<HTMLDivElement>)=>{
 		if(this.isDown){
-			console.log("Move");
 			const delta = event.clientX - this.lastX;
 			this.lastX = event.clientX;
 			numberScale.moveBy(-delta);
@@ -171,7 +178,6 @@ class Home extends React.Component {
 	}
 
 	mouseUp = (event:React.MouseEvent<HTMLDivElement>)=>{
-		console.log("Up");
 		this.isDown = false;
 		event.stopPropagation();
 	}
