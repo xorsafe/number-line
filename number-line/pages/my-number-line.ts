@@ -6,18 +6,22 @@ export interface INumberLineOptions{
 	 * that has a length. The array must have at least one item.
 	 */
 	pattern:number[];
-	/** Base value of the number line for the area covered by {@link baseLength} */
-	baseCoverage:number;
+	/**
+	 * Base unit value of the number line for magnification=1,
+	 * and for the length covered by {@link baseUnitLength} 
+	 **/
+	baseUnitValue:number;
 	/** 
-	 * Length of the number line basis which all calculations are performed.
-	 * Note that the number line is virtually infinite but {@link baseLength}
-	 * along with {@link baseCoverage} governs the starting scale
+	 * Base unit length of the number line basis which all calculations are performed.
+	 * Note that the number line is virtually infinite but {@link baseUnitLength}
+	 * along with {@link baseUnitValue} governs the starting scale
 	 */
-	baseLength:number;
-	/** The lower bound breakpoint for unit length*/
-	breakpointLowerbound:number;
-	/** The upper bound breakpoint for unit length*/
-	breakpointUpperBound:number;
+	baseUnitLength:number;
+	/**
+	 * The lower and upper breakpoint for unit length as it stretches
+	 * and shrinks because of zooming
+	 **/
+	breakpoints:[number,number];
 	/** The labelling strategy for tick marks */
 	labelStrategy:ITickMarkLabelStrategy;
 	/** 
@@ -52,12 +56,43 @@ export interface INumberLineOptions{
 	 * @default false
 	 */
 	strechToFit?:boolean;
+	/** 
+	 * Final descending unit values as magnification increases (see example).
+	 * This should always be descending and end with a positive number greater than 0.
+	 * Also note that, during this range the unit length stretches and contracts
+	 * based on magnification unless it is trying to go beyond the last value in 
+	 * which case it stretches upto {@link maximumLengthOfLastSubdivision}.
+	 * If you leave this array empty, there will be no critical "stretchy,shrinky" 
+	 * portion in your number line. This configuration is application specific, but 
+	 * for a tool like Sketch, see the example below.
+	 * @example 
+	 * 'For the following subdivisionFallout'
+	 * [200,100,50,20,10],
+	 * 'as the magnification increases,'
+	 * 'unit value of :'
+	 * 200 gets subdivided into 100
+	 * 100 gets subdivided into 50
+	 * 50 gets subdivided into 20
+	 * 20 gets subdivided into 10
+	 * 10 does not get subdivided any further
+	 **/
+	subdivisionFallout:number[];
+	/** 
+	 * Maximum length of the last subdivision as the magnification increases.
+	 * Beyond this point, magnification is disallowed.
+	 * If the last number of {@link subdivisionFallout} is 10 and 
+	 * {@link maximumLengthOfLastSubdivision} is 500, unit length will be 500 
+	 * for a unit value of 10 but there will be no magnification past that point.
+	 **/
+	maximumLengthOfLastSubdivision:number;
+
 }
 
 
 /** 
  * A strechable, zoomable number line view model that can
- * be used to construct functional rulers and graphs 
+ * be used to construct functional rulers and graphs. 
+ * Partially inspired by the number line used in tools like Sketch
  */
 export class NumberLine{
 
@@ -65,7 +100,6 @@ export class NumberLine{
 	private _magnification:number = 1;
 	private _unitLength:number = -1;
 	private _unitValue:number = -1;
-
 	
 	constructor(private readonly _options:INumberLineOptions){
 		this.initialize();
@@ -84,6 +118,20 @@ export class NumberLine{
 		}else if(this.options.stretchModulo<=1){
 			throw new Error("Stretch modulo cannot be <=1");
 		}
+
+		if(!this.isSortedInStrictlyDescendingOrder(this.options.subdivisionFallout)){
+			throw new Error("Subdivision fallout is not sorted in descending order");
+		}
+		if(this.options.subdivisionFallout.length>0){
+			if(this.options.subdivisionFallout[this.options.subdivisionFallout.length-1]<=0){
+				throw new Error("Last value of subdivision fallout cannot be 0 or negative");
+			}
+			if(this.options.subdivisionFallout[0]>this.options.baseUnitValue){
+				throw new Error("First subdivision cannot be greater than base unit length");
+			}
+		}
+
+
 		this.options.strechToFit = this.options.strechToFit==undefined?false:this.options.strechToFit;
 		
 		this._magnification = this.options.initialMagnification;
@@ -92,6 +140,20 @@ export class NumberLine{
 		if(this.options.strechToFit && this.options.finiteEnd!=undefined){
 			this.strechToFit(this.options.finiteEnd);
 		}
+	}
+
+	private isSortedInStrictlyDescendingOrder(arr:number[]):boolean{
+		if(arr.length==0){
+			return true;
+		}
+		let previous = arr[0];
+		for(let i =1;i<arr.length;i++){
+			if(arr[i]>=previous){
+				return false;
+			}
+			previous = arr[i];
+		}
+		return true;
 	}
 
 	/**
@@ -128,19 +190,40 @@ export class NumberLine{
 	 * so as to recompute unit length and unit value. Computes in O(1) time
 	 * */
 	private computeScale(){
-		const repeater = 1 + this.magnification%this.options.stretchModulo!;
-		this._unitLength = rangeMapper(
-							repeater,
-							1,
-							this.options.stretchModulo!+1,
-							this.options.breakpointLowerbound,
-							this.options.breakpointUpperBound);
-
-		const unitCount = this.baseLength / this._unitLength;
-		// last value is unitCount * unit value
-		// therefore, as magnification inversely divides last value
-		this._unitValue = this.baseCoverage/(this.magnification*unitCount);
 		
+		this._unitValue = this.options.baseUnitValue / this.magnification;
+		// compute the unit length based on which portion of the number line we are in
+
+		if(this.options.subdivisionFallout.length==0){
+			// outside range
+			this._unitLength = this.options.baseUnitLength;
+		}else if(this._unitValue>this.options.subdivisionFallout[0]){
+			// also outside range
+			this._unitLength = this.options.baseUnitLength;
+		}else if(this._unitValue>this.options.subdivisionFallout[this.options.subdivisionFallout.length-1]){
+			// within subdivision range
+			const startingMagnification = this.options.baseUnitValue/this.options.subdivisionFallout[0];
+			const subdivisionIndex = Math.trunc((this.magnification - startingMagnification)/this.options.stretchModulo!);
+			console.log("subdivisionIndex"+subdivisionIndex);
+			this._unitValue = this.options.subdivisionFallout[subdivisionIndex];
+			const repeater = 1 + this.magnification%this.options.stretchModulo!;
+			this._unitLength = rangeMapper(
+								repeater,
+								1,
+								this.options.stretchModulo!+1,
+								this.options.breakpoints[0],
+								this.options.breakpoints[1]);
+		}else{
+			// below subdivision range
+			this._unitValue = this.options.subdivisionFallout[this.options.subdivisionFallout.length-1];
+			const repeater = 1 + this.magnification%this.options.stretchModulo!;
+			this._unitLength = rangeMapper(
+								repeater,
+								1,
+								this.options.stretchModulo!+1,
+								this.options.breakpoints[0],
+								this.options.maximumLengthOfLastSubdivision);
+		}
 	}
 
 	/**
@@ -177,6 +260,7 @@ export class NumberLine{
 		if(wrtOrigin){
 			return (value/this.unitValue) * this.unitLength;
 		}else{
+			console.log("unitValue",this.unitValue);
 			return (value/this.unitValue) * this.unitLength - this.displacement;
 		}
 	}
@@ -211,6 +295,7 @@ export class NumberLine{
 			firstTickMarkIndex = totalNegativeTicks % this.tickCount;
 		}
 		firstTickMarkPosition = tickCountsTillFirstTick*tickGap - this.displacement;
+		// console.log("tickCountsTillFirstTick*tickGap: "+tickCountsTillFirstTick*tickGap+"displacement "+this.displacement)
 
 		const totalTicks = Math.floor((length - firstTickMarkPosition)/tickGap);
 		const leftoverSpace = length - totalTicks*tickGap;
@@ -218,8 +303,8 @@ export class NumberLine{
 		const numberLineViewModel:NumberLineViewModel = {
 			offset:firstTickMarkPosition,
 			leftoverSpace:leftoverSpace,
-			startingValue:this.firstValue,
-			endingValue:this.valueAt(length,false),
+			startingValue:isActuallyZero(this.firstValue)?0:this.firstValue,
+			endingValue:isActuallyZero(this.valueAt(length,false))?0:this.valueAt(length,false),
 			length:length,
 			numberLine:this,
 			tickMarks:[],
@@ -239,12 +324,12 @@ export class NumberLine{
 			) {
 
 				const tickMarkViewModel:TickMarkViewModel={
-					value:currentTickValue,
+					value:isActuallyZero(currentTickValue)?0:currentTickValue,
 					position:currentTickPosition,
 					height:this.options.pattern[currentTickIndex],
 					label:this.options.labelStrategy!=null?
 						this.options.labelStrategy.labelFor(
-							currentTickValue,
+							isActuallyZero(currentTickValue)?0:currentTickValue,
 							currentTickIndex,
 							currentTickPosition,
 							this):
@@ -264,6 +349,8 @@ export class NumberLine{
 		return numberLineViewModel;
 	}
 
+	
+
 	/** 
 	 * Moves the ruler by a specified amount
 	 * @param delta The amount to move by. Value can be either positive or negative
@@ -281,15 +368,15 @@ export class NumberLine{
 	 * @returns True if zoom was successful, false if zoom was out of range
 	 */
 	zoomAround(delta:number,positionFromStart:number):boolean{
-		if(this._magnification+delta<=0){
+		if(this._magnification+delta<=1){
 			return false;
 		}
+		
 		const fixedValue = this.valueAt(positionFromStart,false);
-		// const beforeZoom = this.locationOf(fixedValue);
 		this._magnification+=delta;
 		this.computeScale();
-		const afterZoom = this.locationOf(fixedValue,false);
-		const cancelDifference = afterZoom - positionFromStart;
+		const shiftedPosition = this.locationOf(fixedValue,false);
+		const cancelDifference = shiftedPosition - positionFromStart;
 		this.moveBy(cancelDifference);
 		return true;
 	}
@@ -329,7 +416,7 @@ export class NumberLine{
 
 	/** Base final value for magnificaiton = 1, displacement=0 for base length */
 	get baseCoverage():number{
-		return this.options.baseCoverage;
+		return this.options.baseUnitValue;
 	}
 
 	/** Length of each unit based on current magnification, lower and upper breakpoints */
@@ -347,7 +434,7 @@ export class NumberLine{
 	 * w.r.t which all calculations are performed 
 	 */
 	get baseLength():number{
-		return this.options.baseLength;
+		return this.options.baseUnitLength;
 	}
 
 	/** Number of tick marks in a unit */
@@ -385,6 +472,19 @@ export interface ITickMarkLabelStrategy{
  */
 export function rangeMapper(x:number,a:number,b:number,c:number,d:number):number{
 	return ((x-a)/(b-a))*(d-c) + c;
+}
+
+/**
+ * Checks if a number is actually zero or slightly something else
+ * @param n Number possibly 0.0 0 or -0.0
+ * @returns True if number is perfectly 0, false otherwise
+ */
+export function isActuallyZero(n:number):boolean{
+	const abs = Math.abs(n);
+	if(abs==0){
+		// console.log("value:"+abs+" status:"+(abs==0))
+	}
+	return abs==0;
 }
 
 /** ViewModel that describes what a number line looks like */

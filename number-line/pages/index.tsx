@@ -2,23 +2,32 @@ import Head from 'next/head';
 import React, { createRef } from 'react';
 import Layout, { siteTitle } from '../components/layout';
 import utilStyles from '../styles/utils.module.css';
-import { NumberLine, ITickMarkLabelStrategy, NumberLineViewModel, TickMarkViewModel} from './my-number-line';
+import { NumberLine, ITickMarkLabelStrategy, NumberLineViewModel, TickMarkViewModel, isActuallyZero} from './my-number-line';
 
 const numberScaleTickMarkStrategy:ITickMarkLabelStrategy={
 	labelFor(value,index,position,numberLine){
+		// if(Math.round(value)==0){
+		// 	return "0";// 0.0 should be rendered as just 0
+		// }
 		if(index==0 || index ==5){
-			return Math.round(value)+"";
+			if(isActuallyZero(value)){
+				return value+"";
+			}else{
+				return value.toFixed(1)+"";
+			}
+			
 		}
 		return "";
 	}
 }
 const numberScale:NumberLine = new NumberLine({
-	baseLength:1000,
-	baseCoverage:100,
-	breakpointLowerbound:20,
-	breakpointUpperBound:100,
+	baseUnitLength:100,
+	baseUnitValue:1000,
+	breakpoints:[100,180],
 	labelStrategy:numberScaleTickMarkStrategy,
 	pattern:[3,1,1,1,1,2,1,1,1,1],
+	subdivisionFallout:[200,100,50,20,10],
+	maximumLengthOfLastSubdivision:500
 
 })
 
@@ -54,9 +63,9 @@ class NumberScaleTickMarks extends React.Component<NumberLineProps,NumberLineSta
 		let keyCounter=0;
 		// This example uses tailwind ^3.1.6
 		return (
-			<div className={'flex items-end select-none'} style={{columnGap:this.state.model.gap-1}}>
+			<div className={'flex items-end select-none'} style={{columnGap:this.state.model.gap-1,paddingLeft:this.state.model.offset}}>
 				{
-					this.state.model.tickMarks.map((v,i,tvm)=>{
+					this.state.model.tickMarks.slice(0,-2).map((v,i,tvm)=>{
 						if(v.patternIndex==0){
 							const leftClassName = this.tickMarkLeftClassName(v);
 							return (
@@ -152,7 +161,7 @@ class Home extends React.Component {
 	zoom=(event:WheelEvent)=>{
 		const delta = event.deltaY*0.01;
 		numberScale.zoomAround(delta,event.x);
-		console.log("delta",delta,'event',event);
+		console.log(numberScale.magnification);
 		this.numberLineContainer.current?.setState({model:numberScale.buildViewModel(this.containerWidth)})
 		event.preventDefault();
 	}
