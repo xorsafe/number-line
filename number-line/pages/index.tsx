@@ -21,7 +21,6 @@ const numberScaleTickMarkStrategy:ITickMarkLabelStrategy={
 	}
 }
 const numberScale:NumberLine = new NumberLine({
-	baseUnitLength:100,
 	baseUnitValue:1000,
 	breakpoints:[100,180],
 	labelStrategy:numberScaleTickMarkStrategy,
@@ -125,7 +124,7 @@ class Home extends React.Component {
 		if(this.resizeObserver){
 			this.resizeObserver.disconnect();
 		}
-		this.resizeElement.current?.removeEventListener('wheel',this.zoom);// TODO last argument missing
+		this.resizeElement.current?.removeEventListener('wheel',this.zoom);
 	}
 
 	render(): React.ReactNode {
@@ -163,7 +162,7 @@ class Home extends React.Component {
 		const value= numberScale.valueAt(event.x,false);
 
 		numberScale.zoomAround(value,event.x,delta);
-		console.log(numberScale.magnification);
+		
 		this.numberLineContainer.current?.setState({model:numberScale.buildViewModel(this.containerWidth)})
 		event.preventDefault();
 	}

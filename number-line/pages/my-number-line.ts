@@ -7,16 +7,9 @@ export interface INumberLineOptions{
 	 */
 	pattern:number[];
 	/**
-	 * Base unit value of the number line for magnification=1,
-	 * and for the length covered by {@link baseUnitLength} 
+	 * Base unit value of the number line for magnification=1
 	 **/
 	baseUnitValue:number;
-	/** 
-	 * Base unit length of the number line basis which all calculations are performed.
-	 * Note that the number line is virtually infinite but {@link baseUnitLength}
-	 * along with {@link baseUnitValue} governs the starting scale
-	 */
-	baseUnitLength:number;
 	/**
 	 * The lower and upper breakpoint for unit length as it stretches
 	 * and shrinks because of zooming
@@ -44,18 +37,6 @@ export interface INumberLineOptions{
 	 * @default 1 
 	 */
 	initialMagnification?:number;
-	/** 
-	 * The last value on the number line. Setting this value
-	 * means that the number line is bound.Optional.
-	 */
-	finiteEnd?:number;
-	/** 
-	 * Stretches the entire number line such that the first
-	 * value is the starting value and the last value is the
-	 * ending value. Requires {@link finiteEnd} to be set. 
-	 * @default false
-	 */
-	strechToFit?:boolean;
 	/** 
 	 * Final descending unit values as magnification increases (see example).
 	 * This should always be descending and end with a positive number greater than 0.
@@ -103,6 +84,7 @@ export class NumberLine{
 	private _lastZoomValue!:number;
 	private _lastZoomAddress!:number;
 	private _lastZoomValid = false;
+	private _lastZoomScaleCategory!:'above'|'within'|'last';
 	
 	constructor(private readonly _options:INumberLineOptions){
 		this.initialize();
@@ -135,14 +117,14 @@ export class NumberLine{
 		}
 
 
-		this.options.strechToFit = this.options.strechToFit==undefined?false:this.options.strechToFit;
+		// this.options.strechToFit = this.options.strechToFit==undefined?false:this.options.strechToFit;
 		
 		this._magnification = this.options.initialMagnification;
 		this._displacement = this.options.initialDisplacement;
 		this.computeScale();
-		if(this.options.strechToFit && this.options.finiteEnd!=undefined){
-			this.strechToFit(this.options.finiteEnd);
-		}
+		// if(this.options.strechToFit && this.options.finiteEnd!=undefined){
+		// 	this.strechToFit(this.options.finiteEnd);
+		// }
 	}
 
 	private isSortedInStrictlyDescendingOrder(arr:number[]):boolean{
@@ -164,13 +146,15 @@ export class NumberLine{
 	 * value is the starting value(0) and the last value is the
 	 * {@link finalValue}
 	 * @param finalValue The last value on the number line
+	 * @param length The length within which this number line needs to be stretched
 	 */
-	strechToFit(finalValue: number) {
+	strechToFit(finalValue: number,length:number) {
 		if(finalValue<=0){
 			throw new Error("Final value has to be positive. Consider using rangeFit instead");
 		}
 		this._displacement = 0;
-		this._magnification = this.baseCoverage / finalValue;
+		const coverage = (length/this.unitLength) * this.unitValue;
+		this._magnification = coverage / finalValue;
 		this.computeScale();
 	}
 
@@ -178,13 +162,14 @@ export class NumberLine{
 	 * Fits a range within the base length
 	 * @param startValue Smaller value
 	 * @param endValue Bigger value
+	 * @param length The length within which this number line needs to be stretched
 	 */
-	rangeFit(startValue:number,endValue:number){
+	rangeFit(startValue:number,endValue:number,length:number){
 		if(endValue<=startValue){
 			throw new Error("Ending value has to be greater than starting value");
 		}
 		const difference = endValue - startValue;
-		this.strechToFit(difference);
+		this.strechToFit(difference,length);
 		this.moveBy(startValue*this.magnification);
 	}
 
@@ -196,28 +181,32 @@ export class NumberLine{
 		
 		this._unitValue = this.options.baseUnitValue / this.magnification;
 		// compute the unit length based on which portion of the number line we are in
+		const scaleCategory = this.unitScaleCategory();
 
-		if(this.options.subdivisionFallout.length==0){
+		if(scaleCategory=='above'){
 			// outside range
-			this._unitLength = this.options.baseUnitLength;
-		}else if(this._unitValue>this.options.subdivisionFallout[0]){
-			// also outside range
-			this._unitLength = this.options.baseUnitLength;
-		}else if(this._unitValue>this.options.subdivisionFallout[this.options.subdivisionFallout.length-1]){
+			// unit length is midpoint of the 2 breakpoints
+			// notice that we divide by 2 and below we add 0.5 to the domainValue
+			this._unitLength = (this.options.breakpoints[0]+this.options.breakpoints[1])/2;
+		}else if(scaleCategory=='within'){
 			// within subdivision range
 			const startingMagnification = this.options.baseUnitValue/this.options.subdivisionFallout[0];
 			const subdivisionIndex = Math.trunc((this.magnification - startingMagnification)/this.options.stretchModulo!);
 			this._unitValue = this.options.subdivisionFallout[subdivisionIndex];
-			const repeater = 1 + this.magnification%this.options.stretchModulo!;
+			// unit length needs to be carried from before(adding 0.5 to match the midpoint from above)
+			const domainValue = 1 + (this.magnification - startingMagnification)%this.options.stretchModulo! + 0.5;
+
 			this._unitLength = rangeMapper(
-								repeater,
+								domainValue,
 								1,
 								this.options.stretchModulo!+1,
 								this.options.breakpoints[0],
 								this.options.breakpoints[1]);
+			console.log("within subdivision unitValue "+this.unitValue," unitLength"+this.unitLength)
 		}else{
 			// below subdivision range
 			this._unitValue = this.options.subdivisionFallout[this.options.subdivisionFallout.length-1];
+			
 			const repeater = 1 + this.magnification%this.options.stretchModulo!;
 			this._unitLength = rangeMapper(
 								repeater,
@@ -225,6 +214,7 @@ export class NumberLine{
 								this.options.stretchModulo!+1,
 								this.options.breakpoints[0],
 								this.options.maximumLengthOfLastSubdivision);
+			console.log("below subdivision unitValue "+this.unitValue," unitLength"+this.unitLength)
 		}
 	}
 
@@ -234,20 +224,37 @@ export class NumberLine{
 	 * @returns An enum representing which category the current number line 
 	 * configuration is in
 	 */
-	currentSubdivisionRange():'above'|'within'|'last'{
-		if(this.options.subdivisionFallout.length==0){
+	unitScaleCategory():'above'|'within'|'last'{
+
+		if(this.options.subdivisionFallout==null || this.options.subdivisionFallout.length==0){
 			// above range
 			return 'above';
-		}else if(this._unitValue>this.options.subdivisionFallout[0]){
-			// also above range
-			return 'above';
-		}else if(this._unitValue>this.options.subdivisionFallout[this.options.subdivisionFallout.length-1]){
-			// within subdivision range
-			return 'within';
 		}else{
-			// last subdivision range
-			return 'last';
+			const startingMagnification = this.options.baseUnitValue/this.options.subdivisionFallout[0];
+			const subdivisionIndex = Math.trunc((this.magnification - startingMagnification)/this.options.stretchModulo!);
+			if(subdivisionIndex<0){
+				return 'above';
+			}else if(subdivisionIndex<this.options.subdivisionFallout.length){
+				return 'within';
+			}else{
+				return 'last';
+			}
 		}
+
+		// if(this.options.subdivisionFallout==null || this.options.subdivisionFallout.length==0){
+		// 	// above range
+		// 	return 'above';
+		// }else if(this._unitValue>this.options.subdivisionFallout[0]){
+		// 	// also above range
+		// 	return 'above';
+		// }else if(this._unitValue>this.options.subdivisionFallout[this.options.subdivisionFallout.length-1]){
+			
+		// 	// within subdivision range
+		// 	return 'within';
+		// }else{
+		// 	// last subdivision range
+		// 	return 'last';
+		// }
 	}
 
 	/**
@@ -405,30 +412,47 @@ export class NumberLine{
 		const before = this.locationOf(value,false);
 		this._magnification+=delta;
 		this.computeScale();
-		const scaleCategory = this.currentSubdivisionRange();
-		
+		const scaleCategory = this.unitScaleCategory();
+		console.log("scale category "+scaleCategory)
+		if(scaleCategory=='last' && this.unitLength>this.options.maximumLengthOfLastSubdivision){
+			// cancel all changes and return false
+			console.log("last subdivision limit reached");
+			this._magnification-=delta;
+			this.computeScale();
+			return false;
+		}
+		const after = this.locationOf(value,false);
+		const cancelDifference = after - before;
 		if(scaleCategory!='above'){
-			const after = this.locationOf(value,false);
-			const cancelDifference = after - before;
 			this._displacement+=cancelDifference;
-	
-			// minor correction to maintain sync
-			if(this._lastZoomValid){
-				if(address==this._lastZoomAddress){
-					const difference = value - this._lastZoomValue;
-					const correction = (difference/this.unitValue)*this.unitLength;
-					this._displacement-=correction;
-				}else{
-					this._lastZoomValue = value;
-					this._lastZoomAddress = address;
-				}
+		}
+
+		if(scaleCategory!=this._lastZoomScaleCategory){
+			this._lastZoomValid = false;
+		}
+
+		// minor correction to maintain sync
+		if(this._lastZoomValid){
+			if(
+				address==this._lastZoomAddress && 
+				scaleCategory!='above'){
+				const difference = value - this._lastZoomValue;
+				const correction = (difference/this.unitValue)*this.unitLength;
+				this._displacement-=correction;
 			}else{
 				this._lastZoomValue = value;
 				this._lastZoomAddress = address;
-				this._lastZoomValid = true;
 			}
+		}else{
+			this._lastZoomValue = value;
+			this._lastZoomAddress = address;
+			this._lastZoomValid = true;
 		}
+		
 
+		// when scaleCategory changes from above to within
+		// invalidate the lastZoom
+		this._lastZoomScaleCategory = scaleCategory;
 		return true;
 	}
 
@@ -460,15 +484,10 @@ export class NumberLine{
 		return this.valueAt(0,false);
 	}
 
-	/** The last value on the number line based on {@link baseLength}, displacement and magnification */
-	get lastValue():number{
-		return this.valueAt(this.baseLength,false);
-	}
-
 	/** Base final value for magnificaiton = 1, displacement=0 for base length */
-	get baseCoverage():number{
-		return this.options.baseUnitValue;
-	}
+	// get baseCoverage():number{
+	// 	return this.options.baseUnitValue;
+	// }
 
 	/** Length of each unit based on current magnification, lower and upper breakpoints */
 	get unitLength():number{
@@ -478,14 +497,6 @@ export class NumberLine{
 	/** Value of each unit based on magnification and base value of a unit */
 	get unitValue():number{
 		return this._unitValue;
-	}
-
-	/** 
-	 * Shortcut for getting the basis length of the number line,
-	 * w.r.t which all calculations are performed 
-	 */
-	get baseLength():number{
-		return this.options.baseUnitLength;
 	}
 
 	/** Number of tick marks in a unit */
