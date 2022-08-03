@@ -100,6 +100,9 @@ export class NumberLine{
 	private _magnification:number = 1;
 	private _unitLength:number = -1;
 	private _unitValue:number = -1;
+	private _lastZoomValue!:number;
+	private _lastZoomAddress!:number;
+	private _lastZoomValid = false;
 	
 	constructor(private readonly _options:INumberLineOptions){
 		this.initialize();
@@ -204,7 +207,6 @@ export class NumberLine{
 			// within subdivision range
 			const startingMagnification = this.options.baseUnitValue/this.options.subdivisionFallout[0];
 			const subdivisionIndex = Math.trunc((this.magnification - startingMagnification)/this.options.stretchModulo!);
-			console.log("subdivisionIndex"+subdivisionIndex);
 			this._unitValue = this.options.subdivisionFallout[subdivisionIndex];
 			const repeater = 1 + this.magnification%this.options.stretchModulo!;
 			this._unitLength = rangeMapper(
@@ -223,6 +225,28 @@ export class NumberLine{
 								this.options.stretchModulo!+1,
 								this.options.breakpoints[0],
 								this.options.maximumLengthOfLastSubdivision);
+		}
+	}
+
+	/**
+	 * Helper for knowing where the number line resides relative to the
+	 * subdivision fallout
+	 * @returns An enum representing which category the current number line 
+	 * configuration is in
+	 */
+	currentSubdivisionRange():'above'|'within'|'last'{
+		if(this.options.subdivisionFallout.length==0){
+			// above range
+			return 'above';
+		}else if(this._unitValue>this.options.subdivisionFallout[0]){
+			// also above range
+			return 'above';
+		}else if(this._unitValue>this.options.subdivisionFallout[this.options.subdivisionFallout.length-1]){
+			// within subdivision range
+			return 'within';
+		}else{
+			// last subdivision range
+			return 'last';
 		}
 	}
 
@@ -260,7 +284,6 @@ export class NumberLine{
 		if(wrtOrigin){
 			return (value/this.unitValue) * this.unitLength;
 		}else{
-			console.log("unitValue",this.unitValue);
 			return (value/this.unitValue) * this.unitLength - this.displacement;
 		}
 	}
@@ -357,27 +380,55 @@ export class NumberLine{
 	 */
 	moveBy(delta:number){
 		this._displacement+=delta;
+		this._lastZoomValid =false;
 	}
 
 	/**
 	 * Magnifies the entire ruler either in or out
-	 * @param delta The amount to magnify by (+ve or -ve)
-	 * @param positionFromStart The position on the number line which
+	 * @param value The value on the number line which
 	 * should not move because thats whats being zoomed around.
-	 * This position is relative to the start of the number line
+	 * @param address Address is just like position for the supplied value.
+	 * The only difference is that address is bound to the current view model.
+	 * Thus, when the view model changes, the same address will give a 
+	 * different value(unlike position). Address is used to track and keep the
+	 * {@link value} and cursor position in sync with each zoom call.
+	 * TLDR: Use renderer specific attribute like event.x to keep value and 
+	 * cursor position in sync.
+	 * @param delta The amount to magnify by (+ve or -ve)
 	 * @returns True if zoom was successful, false if zoom was out of range
 	 */
-	zoomAround(delta:number,positionFromStart:number):boolean{
+	zoomAround(value:number,address:number,delta:number):boolean{
 		if(this._magnification+delta<=1){
 			return false;
 		}
 		
-		const fixedValue = this.valueAt(positionFromStart,false);
+		const before = this.locationOf(value,false);
 		this._magnification+=delta;
 		this.computeScale();
-		const shiftedPosition = this.locationOf(fixedValue,false);
-		const cancelDifference = shiftedPosition - positionFromStart;
-		this.moveBy(cancelDifference);
+		const scaleCategory = this.currentSubdivisionRange();
+		
+		if(scaleCategory!='above'){
+			const after = this.locationOf(value,false);
+			const cancelDifference = after - before;
+			this._displacement+=cancelDifference;
+	
+			// minor correction to maintain sync
+			if(this._lastZoomValid){
+				if(address==this._lastZoomAddress){
+					const difference = value - this._lastZoomValue;
+					const correction = (difference/this.unitValue)*this.unitLength;
+					this._displacement-=correction;
+				}else{
+					this._lastZoomValue = value;
+					this._lastZoomAddress = address;
+				}
+			}else{
+				this._lastZoomValue = value;
+				this._lastZoomAddress = address;
+				this._lastZoomValid = true;
+			}
+		}
+
 		return true;
 	}
 
@@ -446,6 +497,7 @@ export class NumberLine{
 	get tickGap():number{
 		return this._unitLength/this.tickCount;
 	}
+
 }
 
 /** Configurable callback to let the user of NumberLine to define their own tick mark labels */
