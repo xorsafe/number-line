@@ -81,6 +81,8 @@ export class NumberLine{
 	private _magnification:number = 1;
 	private _unitLength:number = -1;
 	private _unitValue:number = -1;
+
+	// a bunch of variables to statefully control zooming
 	private _lastZoomValue!:number;
 	private _lastZoomAddress!:number;
 	private _lastZoomValid = false;
@@ -184,37 +186,39 @@ export class NumberLine{
 		const scaleCategory = this.unitScaleCategory();
 
 		if(scaleCategory=='above'){
-			// outside range
-			// unit length is midpoint of the 2 breakpoints
-			// notice that we divide by 2 and below we add 0.5 to the domainValue
-			this._unitLength = (this.options.breakpoints[0]+this.options.breakpoints[1])/2;
+			// unit length is chosen to be lower breakpoint
+			this._unitLength = this.options.breakpoints[0];
 		}else if(scaleCategory=='within'){
-			// within subdivision range
+			
 			const startingMagnification = this.options.baseUnitValue/this.options.subdivisionFallout[0];
 			const subdivisionIndex = Math.trunc((this.magnification - startingMagnification)/this.options.stretchModulo!);
 			this._unitValue = this.options.subdivisionFallout[subdivisionIndex];
-			// unit length needs to be carried from before(adding 0.5 to match the midpoint from above)
-			const domainValue = 1 + (this.magnification - startingMagnification)%this.options.stretchModulo! + 0.5;
-
+			// unit length needs to be carried from before
+			const domainValue = 1 + (this.magnification - startingMagnification)%this.options.stretchModulo!;
+			
 			this._unitLength = rangeMapper(
 								domainValue,
 								1,
 								this.options.stretchModulo!+1,
 								this.options.breakpoints[0],
 								this.options.breakpoints[1]);
-			console.log("within subdivision unitValue "+this.unitValue," unitLength"+this.unitLength)
+			
 		}else{
 			// below subdivision range
 			this._unitValue = this.options.subdivisionFallout[this.options.subdivisionFallout.length-1];
+			if(this.options.maximumLengthOfLastSubdivision<this.options.breakpoints[0]){
+				this._unitLength = this.options.maximumLengthOfLastSubdivision;
+			}else{
+				// we need to linearly interpolate between breakpoint[0] & maximumLengthOfLastSubdivision
+				// for this, we need to find to find the interpolation factor
+				const startingMagnification = this.options.baseUnitValue/this.options.subdivisionFallout[0];
+				const lastMagnificationStart = startingMagnification + this.options.stretchModulo! * (this.options.subdivisionFallout.length-1);
+				
+				const t = (this.magnification - lastMagnificationStart)/this.options.stretchModulo!;
+				this._unitLength = this.options.breakpoints[0]
+				+ t*(this.options.maximumLengthOfLastSubdivision - this.options.breakpoints[0]);
+			}
 			
-			const repeater = 1 + this.magnification%this.options.stretchModulo!;
-			this._unitLength = rangeMapper(
-								repeater,
-								1,
-								this.options.stretchModulo!+1,
-								this.options.breakpoints[0],
-								this.options.maximumLengthOfLastSubdivision);
-			console.log("below subdivision unitValue "+this.unitValue," unitLength"+this.unitLength)
 		}
 	}
 
@@ -227,34 +231,23 @@ export class NumberLine{
 	unitScaleCategory():'above'|'within'|'last'{
 
 		if(this.options.subdivisionFallout==null || this.options.subdivisionFallout.length==0){
-			// above range
 			return 'above';
 		}else{
+
 			const startingMagnification = this.options.baseUnitValue/this.options.subdivisionFallout[0];
-			const subdivisionIndex = Math.trunc((this.magnification - startingMagnification)/this.options.stretchModulo!);
-			if(subdivisionIndex<0){
+			if(this.magnification<startingMagnification){
 				return 'above';
-			}else if(subdivisionIndex<this.options.subdivisionFallout.length){
-				return 'within';
 			}else{
-				return 'last';
+				const subdivisionIndex = Math.trunc((this.magnification - startingMagnification)/this.options.stretchModulo!);
+				const subdivisionValue = this.options.subdivisionFallout[subdivisionIndex];
+				console.log("subdivionValue",subdivisionValue," last sub",this.options.subdivisionFallout[this.options.subdivisionFallout.length-1]);
+				if(subdivisionValue>this.options.subdivisionFallout[this.options.subdivisionFallout.length-1]){
+					return 'within';
+				}else{
+					return 'last';
+				}
 			}
 		}
-
-		// if(this.options.subdivisionFallout==null || this.options.subdivisionFallout.length==0){
-		// 	// above range
-		// 	return 'above';
-		// }else if(this._unitValue>this.options.subdivisionFallout[0]){
-		// 	// also above range
-		// 	return 'above';
-		// }else if(this._unitValue>this.options.subdivisionFallout[this.options.subdivisionFallout.length-1]){
-			
-		// 	// within subdivision range
-		// 	return 'within';
-		// }else{
-		// 	// last subdivision range
-		// 	return 'last';
-		// }
 	}
 
 	/**
@@ -413,7 +406,7 @@ export class NumberLine{
 		this._magnification+=delta;
 		this.computeScale();
 		const scaleCategory = this.unitScaleCategory();
-		console.log("scale category "+scaleCategory)
+		console.log("scale category "+scaleCategory," unitLength:"+this.unitLength)
 		if(scaleCategory=='last' && this.unitLength>this.options.maximumLengthOfLastSubdivision){
 			// cancel all changes and return false
 			console.log("last subdivision limit reached");
@@ -421,6 +414,7 @@ export class NumberLine{
 			this.computeScale();
 			return false;
 		}
+		// TODO store the new magnfication in private lastZoomMagnification
 		const after = this.locationOf(value,false);
 		const cancelDifference = after - before;
 		if(scaleCategory!='above'){

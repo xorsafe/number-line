@@ -160,7 +160,7 @@ class Home extends React.Component {
 	zoom=(event:WheelEvent)=>{
 		const delta = event.deltaY*0.01;
 		const value= numberScale.valueAt(event.x,false);
-
+		// console.log("event.x",event.x);
 		numberScale.zoomAround(value,event.x,delta);
 		
 		this.numberLineContainer.current?.setState({model:numberScale.buildViewModel(this.containerWidth)})
