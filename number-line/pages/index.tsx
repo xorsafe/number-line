@@ -108,6 +108,8 @@ class Home extends React.Component {
 			for (let entry of entries) {
 				if(entry.target==this.resizeElement.current){
 					this.containerWidth = entry.contentRect.width;
+					numberScale.strechToFit(600,this.containerWidth);
+					// numberScale.rangeFit(3000,6000,this.containerWidth);
 					console.log("Rebuilding number line view model for width "+this.containerWidth);
 					this.numberLineContainer.current?.setState({model:numberScale.buildViewModel(this.containerWidth)})
 					break;

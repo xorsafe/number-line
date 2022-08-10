@@ -69,6 +69,7 @@ export interface INumberLineOptions{
 
 }
 
+export type ScaleCategoryType = 'above'|'within'|'last';
 
 /** 
  * A strechable, zoomable number line view model that can
@@ -144,20 +145,98 @@ export class NumberLine{
 	}
 
 	/**
+	 * Checks if supplied unit length is within breakpoint range of this number line
+	 * @param l The unit length to check
+	 * @returns true if within breakpoint range, false otherwise
+	 */
+	withinBreakpointRange(l:number):boolean{
+		return l>=this.options.breakpoints[0] && l<=this.options.breakpoints[1];
+	}
+
+	/**
 	 * Stretches the entire number line such that the first
 	 * value is the starting value(0) and the last value is the
 	 * {@link finalValue}
 	 * @param finalValue The last value on the number line
 	 * @param length The length within which this number line needs to be stretched
+	 * @param approximation This is an approximation algorithm that internally uses
+	 * {@link zoomAround}. This parameter controls the delta value of the zoom
 	 */
-	strechToFit(finalValue: number,length:number) {
+	strechToFit(finalValue: number,length:number,approximation=0.1) :boolean{
 		if(finalValue<=0){
 			throw new Error("Final value has to be positive. Consider using rangeFit instead");
 		}
 		this._displacement = 0;
-		const coverage = (length/this.unitLength) * this.unitValue;
-		this._magnification = coverage / finalValue;
-		this.computeScale();
+		const valuePerLength = finalValue/length;
+		// figure out the scale category
+		let scaleCategory:ScaleCategoryType = 'above';
+		if(this.options.subdivisionFallout==null || this.options.subdivisionFallout.length==0){
+			scaleCategory = 'above';
+			this._unitLength = this.options.breakpoints[0];
+			this._unitValue = valuePerLength * this._unitLength;
+			this._magnification = this.options.baseUnitValue/this._unitValue;
+			return true;
+		}else{
+			const offsetMagnification = this.options.subdivisionFallout[0]/this.options.baseUnitValue;
+			for(let i =0;i<this.options.subdivisionFallout.length-1;i++){
+				const subdivisionValue = this.options.subdivisionFallout[i];
+				const currentUnitLength = subdivisionValue / valuePerLength;
+				console.debug('currentUnitLength',currentUnitLength);
+				if(this.withinBreakpointRange(currentUnitLength)){
+					this._unitLength = currentUnitLength;
+					this._unitValue = subdivisionValue;
+					// find magnification
+					
+					const startingMagnification = i * this.options.stretchModulo!;
+					const x1 = startingMagnification;
+					const x2 = (i+1)*this.options.stretchModulo!;
+					const y1 = this.options.breakpoints[0];
+					const y2 = this.options.breakpoints[1];
+					const slope = (y2-y1)/(x2-x1);
+					// using y = mx + c, c = breakpoint[0], y = unit length, m = slope
+					// x is 
+					const fractionalMagnification = (this._unitLength - this.options.breakpoints[0])/slope;
+					console.debug("offset",offsetMagnification,"starting",startingMagnification,"fract",fractionalMagnification);
+					this._magnification = offsetMagnification + startingMagnification + fractionalMagnification;
+
+
+					return true;
+				}else if(currentUnitLength<this.options.breakpoints[0]){
+					scaleCategory = 'last';
+				}else{
+					scaleCategory = 'above';
+				}
+
+			}
+			if(scaleCategory=='above'){
+				this._unitLength = this.options.breakpoints[0];
+				this._unitValue = valuePerLength * this._unitLength;
+				this._magnification = this.options.baseUnitValue/this._unitValue;
+				return true;
+			}else if(scaleCategory=='last'){
+				const lastValue = this.options.subdivisionFallout[this.options.subdivisionFallout.length-1];
+				const currentUnitLength = lastValue / valuePerLength;
+				if(currentUnitLength>=this.options.breakpoints[0] && currentUnitLength<=this.options.maximumLengthOfLastSubdivision){
+					this._unitValue = lastValue;
+					this._unitLength = currentUnitLength;
+					const offsetMagnification = this.options.subdivisionFallout[0]/this.options.baseUnitValue;
+					const startingMagnification = this.options.subdivisionFallout.length * this.options.stretchModulo!;
+					const x1 = startingMagnification;
+					const x2 = (this.options.subdivisionFallout.length+1)*this.options.stretchModulo!;
+					const y1 = this.options.breakpoints[0];
+					const y2 = this.options.maximumLengthOfLastSubdivision
+					const slope = (y2-y1)/(x2-x1);
+					// using y = mx + c, c = breakpoint[0], y = unit length, m = slope
+					// x is 
+					const fractionalMagnification = (this._unitLength - this.options.breakpoints[0])/slope;
+					this._magnification = offsetMagnification + startingMagnification + fractionalMagnification;
+					return true;
+				}else{
+					return false;
+				}
+			}
+		}
+		return false;
 	}
 
 	/**
@@ -172,7 +251,8 @@ export class NumberLine{
 		}
 		const difference = endValue - startValue;
 		this.strechToFit(difference,length);
-		this.moveBy(startValue*this.magnification);
+		this._displacement = this.locationOf(startValue,true);
+		
 	}
 
 	/** 
@@ -217,6 +297,9 @@ export class NumberLine{
 				const t = (this.magnification - lastMagnificationStart)/this.options.stretchModulo!;
 				this._unitLength = this.options.breakpoints[0]
 				+ t*(this.options.maximumLengthOfLastSubdivision - this.options.breakpoints[0]);
+				if(this._unitLength>this.options.maximumLengthOfLastSubdivision){
+					this._unitLength= this.options.maximumLengthOfLastSubdivision;
+				}
 			}
 			
 		}
@@ -239,10 +322,14 @@ export class NumberLine{
 				return 'above';
 			}else{
 				const subdivisionIndex = Math.trunc((this.magnification - startingMagnification)/this.options.stretchModulo!);
-				const subdivisionValue = this.options.subdivisionFallout[subdivisionIndex];
-				console.log("subdivionValue",subdivisionValue," last sub",this.options.subdivisionFallout[this.options.subdivisionFallout.length-1]);
-				if(subdivisionValue>this.options.subdivisionFallout[this.options.subdivisionFallout.length-1]){
-					return 'within';
+				if(subdivisionIndex<this.options.subdivisionFallout.length){
+					const subdivisionValue = this.options.subdivisionFallout[subdivisionIndex];
+					console.log("subdivionValue",subdivisionValue," last sub",this.options.subdivisionFallout[this.options.subdivisionFallout.length-1]);
+					if(subdivisionValue>this.options.subdivisionFallout[this.options.subdivisionFallout.length-1]){
+						return 'within';
+					}else{
+						return 'last';
+					}
 				}else{
 					return 'last';
 				}
@@ -457,8 +544,8 @@ export class NumberLine{
 	/**
 	 * A factor that governs the scale of the number line.
 	 * When magnification==1, you are in the base case.
-	 * When magnification>1, you aer zooming out.
-	 * When magnification is b/w 0 and 1, you are zooming in. 
+	 * When magnification>1, you aer zooming in.
+	 * When magnification is b/w 0 and 1, you are zooming out. 
 	 */
 	get magnification():number{
 		return this._magnification;
