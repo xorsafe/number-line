@@ -167,7 +167,95 @@ export class NumberLine{
 			throw new Error("Final value has to be positive. Consider using rangeFit instead");
 		}
 		this._displacement = 0;
+		const existingMagnification = this.magnification;
 		const valuePerLength = finalValue/length;
+		if(this.options.subdivisionFallout==null || this.options.subdivisionFallout.length==0){
+			this._unitLength = this.options.breakpoints[0];
+			this._unitValue = valuePerLength * this._unitLength;
+			this._magnification = this.options.baseUnitValue/this._unitValue;
+			return true;
+		}else{
+			// first we check if the magnification needs to be in the 'above'
+			// scale category
+			this._magnification = this.options.baseUnitValue/this.options.subdivisionFallout[0];
+			this.computeScale();
+			const coverage =(finalValue/this.unitValue)*this.unitLength;
+			if(approx(coverage,length,0.2)){
+				return true;
+			}else if(coverage<length){
+				// scale is a direct computation because it is in the
+				// 'above' scale category
+				this._unitLength = this.options.breakpoints[0];
+				this._unitValue = valuePerLength * this._unitLength;
+				this._magnification = this.options.baseUnitValue/this._unitValue;
+				return true;
+			}else if(coverage>length){
+				// coverage overshooting the length indicates that
+				// scale is in the 'last' category
+
+				
+				// unit value is always going to be:
+				// subdivisionFallout[last index]
+				const lastUnitValue = this.options.subdivisionFallout[this.options.subdivisionFallout.length-1];
+				const c = finalValue/lastUnitValue;
+				const derivedUnitLength = length/c;
+
+				// the 'last' category stretches between
+				// breakpoint[0] & maximumLengthOfLastSubdivision
+				if(derivedUnitLength>this.options.breakpoints[0]&&derivedUnitLength<this.options.maximumLengthOfLastSubdivision){
+					// we have the scale but we still need to find magnification
+					// we range map the magnification between stretch marks
+					// breakpoint[0] & maximumLengthOfLastSubdivision
+					// and
+					// starting and ending magnification
+					const baseMagnification = this.options.baseUnitValue/this.options.subdivisionFallout[0];
+					const startingMagnification = baseMagnification + this.options.stretchModulo! * (this.options.subdivisionFallout.length-1);
+					const endingMagnificaiton = startingMagnification + this.options.stretchModulo!;
+					this._magnification= rangeMapper(
+						derivedUnitLength,
+						this.options.breakpoints[0],
+						this.options.maximumLengthOfLastSubdivision,
+						startingMagnification,
+						endingMagnificaiton
+					)
+					return true;
+				}else{
+					// outside range, i.e it is not possible to fit
+					this._magnification = existingMagnification;
+					this.computeScale();
+					return false;
+				}
+			}else{
+				// 'within' scale category
+				// traverse the descending subdivision fallout
+				// and find the right 'border' that overlaps with the breakpoint range
+				for(let i =0;i<this.options.subdivisionFallout.length-1;i++){
+					const thisMagnification = this.options.baseUnitValue/this.options.subdivisionFallout[i];
+					const thisUnitValue = this.options.subdivisionFallout[i];
+					const thisC = finalValue/thisUnitValue;
+					const thisDerivedUnitLength = length/thisC;
+					
+					const nextMagnification = this.options.baseUnitValue/this.options.subdivisionFallout[i+1];
+					const nextUnitValue = this.options.subdivisionFallout[i+1];
+					const nextC = finalValue/nextUnitValue;
+					const nextDerivedUnitLength = length/nextC;
+
+					// check if the derived unit lengths overlap with the breakpoint range
+					// ascending ranges should overlap
+					// https://stackoverflow.com/questions/3269434/whats-the-most-efficient-way-to-test-if-two-ranges-overlap
+					const [x1,x2]=[nextDerivedUnitLength,thisDerivedUnitLength];
+					const [y1,y2] = this.options.breakpoints;
+					if(x1<=y2 && y1<=x2){
+						// answer lies in this range [x1,x2]
+						// TODO we need to find the magnification
+						// we can settle on the unit value
+					}
+				}
+			}
+		}
+
+
+		/*
 		// figure out the scale category
 		let scaleCategory:ScaleCategoryType = 'above';
 		if(this.options.subdivisionFallout==null || this.options.subdivisionFallout.length==0){
@@ -236,6 +324,7 @@ export class NumberLine{
 				}
 			}
 		}
+		*/
 		return false;
 	}
 
@@ -603,6 +692,10 @@ export interface ITickMarkLabelStrategy{
 	 * @returns The formatted tick mark label. Return null for blank tick marks.
 	 */
 	labelFor(value:number,index:number,position:number,numberLine:NumberLine):string;
+}
+
+function approx(a:number,b:number,marginOfError=0.1){
+	return Math.abs(a-b)<=Math.abs(marginOfError);
 }
 
 /**
