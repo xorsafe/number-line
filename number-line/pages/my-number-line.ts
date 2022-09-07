@@ -227,13 +227,59 @@ export class NumberLine{
 				}
 			}else{
 				// 'within' scale category
+
+				// we do a binary search b/w the starting & ending magnification
+				let startingMagnification = this.options.baseUnitValue/this.options.subdivisionFallout[0];
+				let endingMagnificaiton = this.options.baseUnitValue/this.options.subdivisionFallout[this.options.subdivisionFallout.length-1];
+				
+				let middleValue = Infinity;
+				while(!approx(middleValue,finalValue,0.3)){
+					const middle= (startingMagnification+endingMagnificaiton)/2;
+					this._magnification = middle;
+					this.computeScale();
+					middleValue = this.valueAt(length,true);
+					if(approx(middleValue,finalValue,0.3)){
+						return true;
+					}else if(middleValue>finalValue){
+						endingMagnificaiton = middle-0.1;
+					}else{
+						startingMagnification = middle + 0.1;
+					}
+				}
+
+				this._magnification = existingMagnification;
+				this.computeScale();
+
+				return false;
+
 				// traverse the descending subdivision fallout
 				// and find the right 'border' that overlaps with the breakpoint range
 				for(let i =0;i<this.options.subdivisionFallout.length-1;i++){
 					const thisMagnification = this.options.baseUnitValue/this.options.subdivisionFallout[i];
 					const thisUnitValue = this.options.subdivisionFallout[i];
+					const thisUnitLength = thisUnitValue/valuePerLength;
+
+					if(this.withinBreakpointRange(thisUnitLength)){
+						// all we need to do now is to find the magnification
+						// we need to find the inverse of the range mapper function
+						// l = ((x-a)/(b-a))*(d-c) + c;
+						// x = ((l - c)/(d-c))*(b-a) + a
+						const [a,b,c,d,l]=[
+							1,
+							this.options.stretchModulo!,
+							this.options.breakpoints[0],
+							this.options.breakpoints[1],
+							thisUnitLength
+						]
+						// x is the domainValue from computeScale()
+						const domainValue = ((l - c)/(d-c))*(b-a) + a;
+
+					}
+
 					const thisC = finalValue/thisUnitValue;
 					const thisDerivedUnitLength = length/thisC;
+					
+
 					
 					const nextMagnification = this.options.baseUnitValue/this.options.subdivisionFallout[i+1];
 					const nextUnitValue = this.options.subdivisionFallout[i+1];
@@ -247,8 +293,12 @@ export class NumberLine{
 					const [y1,y2] = this.options.breakpoints;
 					if(x1<=y2 && y1<=x2){
 						// answer lies in this range [x1,x2]
+						// magnificaiton lies in this range [this,next]
 						// TODO we need to find the magnification
 						// we can settle on the unit value
+						const minUnitValue = this.options.breakpoints[0]*valuePerLength;
+						const maxUnitValue = this.options.breakpoints[1]*valuePerLength;
+
 					}
 				}
 			}
