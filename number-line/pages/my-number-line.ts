@@ -178,25 +178,51 @@ export class NumberLine{
 		}else{
 			// first we check if the magnification needs to be in the 'above'
 			// scale category
-			console.log('above category');
 			this._magnification = this.options.baseUnitValue/this.options.subdivisionFallout[0];
 			this.computeScale();
 			const coverage =(finalValue/this.unitValue)*this.unitLength;
 			if(approx(coverage,length,0.2)){
-				console.log('direct coverage');
+				// console.log('direct coverage');
 				return true;
 			}else if(coverage>length){
 				// scale is a direct computation because it is in the
 				// 'above' scale category
+				console.log('above category');
 				this._unitLength = this.options.breakpoints[0];
 				this._unitValue = valuePerLength * this._unitLength;
 				this._magnification = this.options.baseUnitValue/this._unitValue;
-				console.log('direct computation',this._unitLength,this._unitValue,this.magnification);
+				// console.log('direct computation',this._unitLength,this._unitValue,this.magnification);
 				return true;
-			}else if(coverage>length){
-				// coverage overshooting the length indicates that
+			}else{
+				// 'within' scale category
+				// console.log('within scale category');
+
+				// we do a binary search b/w the starting & ending magnification
+				// WARNING: changing variable names mysteriously returns undefined
+				let startingMag = this.options.baseUnitValue/this.options.subdivisionFallout[0];
+				let endingMag = this.options.baseUnitValue/this.options.subdivisionFallout[this.options.subdivisionFallout.length-1];
+				
+				// return false;
+				let middleValue = Infinity;
+				while(!approx(middleValue,finalValue,approximation) && startingMag!=endingMag){
+					// debugger;
+					const middle= (startingMag+endingMag)/2;
+					this._magnification = middle;
+					this.computeScale();
+					middleValue = this.valueAt(length,true);
+					if(approx(middleValue,finalValue,approximation)){
+						console.log('found within');
+						return true;
+					}else if(middleValue<finalValue){
+						endingMag = middle;
+					}else{
+						startingMag = middle;
+					}
+				}
+
+				// if it didn't survive 'within',
 				// scale is in the 'last' category
-				console.log('last category');
+				// console.log('trying last category');
 				
 				// unit value is always going to be:
 				// subdivisionFallout[last index]
@@ -225,169 +251,13 @@ export class NumberLine{
 					return true;
 				}else{
 					// outside range, i.e it is not possible to fit
-					console.log('last category but not allowed');
+					// console.log('last category but not allowed');
 					this._magnification = existingMagnification;
 					this.computeScale();
 					return false;
 				}
-			}else{
-				// 'within' scale category
-				console.log('within scale category');
-
-				// we do a binary search b/w the starting & ending magnification
-				// WARNING: changing variable names mysteriously returns undefined
-				let startingMag = this.options.baseUnitValue/this.options.subdivisionFallout[0];
-				let endingMag = this.options.baseUnitValue/this.options.subdivisionFallout[this.options.subdivisionFallout.length-1];
-				
-				// return false;
-				let middleValue = Infinity;
-				while(!approx(middleValue,finalValue,approximation)){
-					
-					const middle= (startingMag+endingMag)/2;
-					this._magnification = middle;
-					this.computeScale();
-					middleValue = this.valueAt(length,true);
-					if(approx(middleValue,finalValue,approximation)){
-						console.log('found within');
-						return true;
-					}else if(middleValue<finalValue){
-						// endingMag = middle-0.1;
-						endingMag = middle;
-					}else{
-						// startingMag = middle + 0.1;
-						startingMag = middle;
-					}
-				}
-
-				this._magnification = existingMagnification;
-				this.computeScale();
-				console.log('within not found');
-				return false;
-
-				// traverse the descending subdivision fallout
-				// and find the right 'border' that overlaps with the breakpoint range
-				for(let i =0;i<this.options.subdivisionFallout.length-1;i++){
-					const thisMagnification = this.options.baseUnitValue/this.options.subdivisionFallout[i];
-					const thisUnitValue = this.options.subdivisionFallout[i];
-					const thisUnitLength = thisUnitValue/valuePerLength;
-
-					if(this.withinBreakpointRange(thisUnitLength)){
-						// all we need to do now is to find the magnification
-						// we need to find the inverse of the range mapper function
-						// l = ((x-a)/(b-a))*(d-c) + c;
-						// x = ((l - c)/(d-c))*(b-a) + a
-						const [a,b,c,d,l]=[
-							1,
-							this.options.stretchModulo!,
-							this.options.breakpoints[0],
-							this.options.breakpoints[1],
-							thisUnitLength
-						]
-						// x is the domainValue from computeScale()
-						const domainValue = ((l - c)/(d-c))*(b-a) + a;
-
-					}
-
-					const thisC = finalValue/thisUnitValue;
-					const thisDerivedUnitLength = length/thisC;
-					
-
-					
-					const nextMagnification = this.options.baseUnitValue/this.options.subdivisionFallout[i+1];
-					const nextUnitValue = this.options.subdivisionFallout[i+1];
-					const nextC = finalValue/nextUnitValue;
-					const nextDerivedUnitLength = length/nextC;
-
-					// check if the derived unit lengths overlap with the breakpoint range
-					// ascending ranges should overlap
-					// https://stackoverflow.com/questions/3269434/whats-the-most-efficient-way-to-test-if-two-ranges-overlap
-					const [x1,x2]=[nextDerivedUnitLength,thisDerivedUnitLength];
-					const [y1,y2] = this.options.breakpoints;
-					if(x1<=y2 && y1<=x2){
-						// answer lies in this range [x1,x2]
-						// magnificaiton lies in this range [this,next]
-						// TODO we need to find the magnification
-						// we can settle on the unit value
-						const minUnitValue = this.options.breakpoints[0]*valuePerLength;
-						const maxUnitValue = this.options.breakpoints[1]*valuePerLength;
-
-					}
-				}
 			}
 		}
-
-
-		/*
-		// figure out the scale category
-		let scaleCategory:ScaleCategoryType = 'above';
-		if(this.options.subdivisionFallout==null || this.options.subdivisionFallout.length==0){
-			scaleCategory = 'above';
-			this._unitLength = this.options.breakpoints[0];
-			this._unitValue = valuePerLength * this._unitLength;
-			this._magnification = this.options.baseUnitValue/this._unitValue;
-			return true;
-		}else{
-			const offsetMagnification = this.options.subdivisionFallout[0]/this.options.baseUnitValue;
-			for(let i =0;i<this.options.subdivisionFallout.length-1;i++){
-				const subdivisionValue = this.options.subdivisionFallout[i];
-				const currentUnitLength = subdivisionValue / valuePerLength;
-				console.debug('currentUnitLength',currentUnitLength);
-				if(this.withinBreakpointRange(currentUnitLength)){
-					this._unitLength = currentUnitLength;
-					this._unitValue = subdivisionValue;
-					// find magnification
-					
-					const startingMagnification = i * this.options.stretchModulo!;
-					const x1 = startingMagnification;
-					const x2 = (i+1)*this.options.stretchModulo!;
-					const y1 = this.options.breakpoints[0];
-					const y2 = this.options.breakpoints[1];
-					const slope = (y2-y1)/(x2-x1);
-					// using y = mx + c, c = breakpoint[0], y = unit length, m = slope
-					// x is 
-					const fractionalMagnification = (this._unitLength - this.options.breakpoints[0])/slope;
-					console.debug("offset",offsetMagnification,"starting",startingMagnification,"fract",fractionalMagnification);
-					this._magnification = offsetMagnification + startingMagnification + fractionalMagnification;
-
-
-					return true;
-				}else if(currentUnitLength<this.options.breakpoints[0]){
-					scaleCategory = 'last';
-				}else{
-					scaleCategory = 'above';
-				}
-
-			}
-			if(scaleCategory=='above'){
-				this._unitLength = this.options.breakpoints[0];
-				this._unitValue = valuePerLength * this._unitLength;
-				this._magnification = this.options.baseUnitValue/this._unitValue;
-				return true;
-			}else if(scaleCategory=='last'){
-				const lastValue = this.options.subdivisionFallout[this.options.subdivisionFallout.length-1];
-				const currentUnitLength = lastValue / valuePerLength;
-				if(currentUnitLength>=this.options.breakpoints[0] && currentUnitLength<=this.options.maximumLengthOfLastSubdivision){
-					this._unitValue = lastValue;
-					this._unitLength = currentUnitLength;
-					const offsetMagnification = this.options.subdivisionFallout[0]/this.options.baseUnitValue;
-					const startingMagnification = this.options.subdivisionFallout.length * this.options.stretchModulo!;
-					const x1 = startingMagnification;
-					const x2 = (this.options.subdivisionFallout.length+1)*this.options.stretchModulo!;
-					const y1 = this.options.breakpoints[0];
-					const y2 = this.options.maximumLengthOfLastSubdivision
-					const slope = (y2-y1)/(x2-x1);
-					// using y = mx + c, c = breakpoint[0], y = unit length, m = slope
-					// x is 
-					const fractionalMagnification = (this._unitLength - this.options.breakpoints[0])/slope;
-					this._magnification = offsetMagnification + startingMagnification + fractionalMagnification;
-					return true;
-				}else{
-					return false;
-				}
-			}
-		}
-		*/
-		return false;
 	}
 
 	/**
