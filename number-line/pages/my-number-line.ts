@@ -159,8 +159,8 @@ export class NumberLine{
 	 * {@link finalValue}
 	 * @param finalValue The last value on the number line
 	 * @param length The length within which this number line needs to be stretched
-	 * @param approximation This is an approximation algorithm that internally uses
-	 * {@link zoomAround}. This parameter controls the delta value of the zoom
+	 * @param approximation In some cases, this is an approximation algorithm. 
+	 * This parameter controls the closeness of the approximated value to the {@link finalValue}
 	 */
 	strechToFit(finalValue: number,length:number,approximation=0.1) :boolean{
 		if(finalValue<=0){
@@ -170,6 +170,7 @@ export class NumberLine{
 		const existingMagnification = this.magnification;
 		const valuePerLength = finalValue/length;
 		if(this.options.subdivisionFallout==null || this.options.subdivisionFallout.length==0){
+			console.log("no subdivisions");
 			this._unitLength = this.options.breakpoints[0];
 			this._unitValue = valuePerLength * this._unitLength;
 			this._magnification = this.options.baseUnitValue/this._unitValue;
@@ -177,22 +178,25 @@ export class NumberLine{
 		}else{
 			// first we check if the magnification needs to be in the 'above'
 			// scale category
+			console.log('above category');
 			this._magnification = this.options.baseUnitValue/this.options.subdivisionFallout[0];
 			this.computeScale();
 			const coverage =(finalValue/this.unitValue)*this.unitLength;
 			if(approx(coverage,length,0.2)){
+				console.log('direct coverage');
 				return true;
-			}else if(coverage<length){
+			}else if(coverage>length){
 				// scale is a direct computation because it is in the
 				// 'above' scale category
 				this._unitLength = this.options.breakpoints[0];
 				this._unitValue = valuePerLength * this._unitLength;
 				this._magnification = this.options.baseUnitValue/this._unitValue;
+				console.log('direct computation',this._unitLength,this._unitValue,this.magnification);
 				return true;
 			}else if(coverage>length){
 				// coverage overshooting the length indicates that
 				// scale is in the 'last' category
-
+				console.log('last category');
 				
 				// unit value is always going to be:
 				// subdivisionFallout[last index]
@@ -221,35 +225,43 @@ export class NumberLine{
 					return true;
 				}else{
 					// outside range, i.e it is not possible to fit
+					console.log('last category but not allowed');
 					this._magnification = existingMagnification;
 					this.computeScale();
 					return false;
 				}
 			}else{
 				// 'within' scale category
+				console.log('within scale category');
 
 				// we do a binary search b/w the starting & ending magnification
-				let startingMagnification = this.options.baseUnitValue/this.options.subdivisionFallout[0];
-				let endingMagnificaiton = this.options.baseUnitValue/this.options.subdivisionFallout[this.options.subdivisionFallout.length-1];
+				// WARNING: changing variable names mysteriously returns undefined
+				let startingMag = this.options.baseUnitValue/this.options.subdivisionFallout[0];
+				let endingMag = this.options.baseUnitValue/this.options.subdivisionFallout[this.options.subdivisionFallout.length-1];
 				
+				// return false;
 				let middleValue = Infinity;
-				while(!approx(middleValue,finalValue,0.3)){
-					const middle= (startingMagnification+endingMagnificaiton)/2;
+				while(!approx(middleValue,finalValue,approximation)){
+					
+					const middle= (startingMag+endingMag)/2;
 					this._magnification = middle;
 					this.computeScale();
 					middleValue = this.valueAt(length,true);
-					if(approx(middleValue,finalValue,0.3)){
+					if(approx(middleValue,finalValue,approximation)){
+						console.log('found within');
 						return true;
-					}else if(middleValue>finalValue){
-						endingMagnificaiton = middle-0.1;
+					}else if(middleValue<finalValue){
+						// endingMag = middle-0.1;
+						endingMag = middle;
 					}else{
-						startingMagnification = middle + 0.1;
+						// startingMag = middle + 0.1;
+						startingMag = middle;
 					}
 				}
 
 				this._magnification = existingMagnification;
 				this.computeScale();
-
+				console.log('within not found');
 				return false;
 
 				// traverse the descending subdivision fallout
