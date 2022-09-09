@@ -197,21 +197,87 @@ export class NumberLine{
 				// 'within' scale category
 				// console.log('within scale category');
 
+				const originalStartingMagnification = this.options.baseUnitValue/this.options.subdivisionFallout[0];
+				const minUnitValue = valuePerLength * this.options.breakpoints[0];
+				const maxUnitValue = valuePerLength * this.options.breakpoints[1];
+				const minAboveCoverage = length * this.options.subdivisionFallout[0]/this.options.breakpoints[0];
+				for(let i =0;i<this.options.subdivisionFallout.length;i++){
+					const thisUnitValue = this.options.subdivisionFallout[i];
+					const unitLengthForThisFallout = thisUnitValue/valuePerLength;
+					const maxCoverage = length * thisUnitValue/this.options.breakpoints[0];
+					const minCoverage = length * thisUnitValue/this.options.breakpoints[1];
+					console.log('min,max',minCoverage,maxCoverage);
+					if(finalValue>=minCoverage && finalValue<=maxCoverage){
+						// answer has been found inside this fallout range
+						const magnificationForThisFallout = originalStartingMagnification+this.options.stretchModulo!*i;
+						const magnificationForNextFallout = originalStartingMagnification+(this.options.stretchModulo!*(i+1));
+						this._magnification = rangeMapper(
+							finalValue,
+							minCoverage,
+							maxCoverage,
+							magnificationForThisFallout,
+							magnificationForNextFallout,
+						)
+						this.computeScale();
+						return true;
+					}
+					
+					// if(thisUnitValue>=minUnitValue && thisUnitValue<=maxUnitValue){
+					// if(this.withinBreakpointRange(unitLengthForThisFallout)){
+					// 	const magnificationForThisFallout = originalStartingMagnification+this.options.stretchModulo!*i;
+					// 	const magnificationForNextFallout = originalStartingMagnification+(this.options.stretchModulo!*(i+1));
+					// 	this._magnification = rangeMapper(
+					// 		unitLengthForThisFallout,
+					// 		this.options.breakpoints[0],
+					// 		this.options.breakpoints[1],
+					// 		magnificationForThisFallout,
+					// 		magnificationForNextFallout
+					// 	);
+					// 	this._magnification=originalStartingMagnification + this.options.baseUnitValue/(maxUnitValue - minUnitValue);
+					// 	this.computeScale();
+					// 	if(approx(this.valueAt(length,true),finalValue,approximation)){
+					// 		// console.log('found within');
+					// 		return true;
+					// 	}
+					// 	// return true;
+					// }
+				}
+				/*
 				// we do a binary search b/w the starting & ending magnification
 				// WARNING: changing variable names mysteriously returns undefined
 				let startingMag = this.options.baseUnitValue/this.options.subdivisionFallout[0];
-				let endingMag = this.options.baseUnitValue/this.options.subdivisionFallout[this.options.subdivisionFallout.length-1];
+				let endingMag = startingMag + this.options.stretchModulo! * (this.options.subdivisionFallout.length-1);
+				// let endingMag = this.options.baseUnitValue/this.options.subdivisionFallout[this.options.subdivisionFallout.length-1];
 				
-				// return false;
-				let middleValue = Infinity;
+				
+				this._magnification = (startingMag+endingMag)/2;
+				this.computeScale();
+				let middleValue = this.valueAt(length,true);
+
 				while(!approx(middleValue,finalValue,approximation) && startingMag!=endingMag){
-					// debugger;
+					debugger;
 					const middle= (startingMag+endingMag)/2;
-					this._magnification = middle;
+					// because the fallout range can be unevenly described in a descending order
+					// we need to range map binary search coordinates(middle) to fallout range coordinate
+					// for this, we find the fractional index location of the middle in the magnification range
+					const fractionalIndex = (middle - originalStartingMagnification)/this.options.stretchModulo!;
+					const falloutIndex = Math.floor(fractionalIndex);
+					const fraction = fractionalIndex%1;
+					const falloutDifference = this.options.subdivisionFallout[falloutIndex] - this.options.subdivisionFallout[falloutIndex + 1];
+					const translated = rangeMapper(
+						fraction * falloutDifference,
+						0,
+						falloutDifference,
+						originalStartingMagnification + this.options.stretchModulo! * falloutIndex,
+						originalStartingMagnification + this.options.stretchModulo! * (falloutIndex+1),
+						)
+
+					this._magnification = translated;
 					this.computeScale();
+					console.log("finding");
 					middleValue = this.valueAt(length,true);
 					if(approx(middleValue,finalValue,approximation)){
-						console.log('found within');
+						// console.log('found within');
 						return true;
 					}else if(middleValue<finalValue){
 						endingMag = middle;
@@ -219,6 +285,7 @@ export class NumberLine{
 						startingMag = middle;
 					}
 				}
+				*/
 
 				// if it didn't survive 'within',
 				// scale is in the 'last' category
@@ -270,6 +337,7 @@ export class NumberLine{
 		if(endValue<=startValue){
 			throw new Error("Ending value has to be greater than starting value");
 		}
+		// debugger;
 		const difference = endValue - startValue;
 		this.strechToFit(difference,length);
 		this._displacement = this.locationOf(startValue,true);
@@ -285,7 +353,7 @@ export class NumberLine{
 		this._unitValue = this.options.baseUnitValue / this.magnification;
 		// compute the unit length based on which portion of the number line we are in
 		const scaleCategory = this.unitScaleCategory();
-
+		console.log("scale category",scaleCategory);
 		if(scaleCategory=='above'){
 			// unit length is chosen to be lower breakpoint
 			this._unitLength = this.options.breakpoints[0];
@@ -352,6 +420,7 @@ export class NumberLine{
 						return 'last';
 					}
 				}else{
+					console.log("falling last");
 					return 'last';
 				}
 			}
