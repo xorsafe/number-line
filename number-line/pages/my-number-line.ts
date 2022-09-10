@@ -161,6 +161,11 @@ export class NumberLine{
 	 * @param length The length within which this number line needs to be stretched
 	 * @param approximation In some cases, this is an approximation algorithm. 
 	 * This parameter controls the closeness of the approximated value to the {@link finalValue}
+	 * @returns True indicates successful coverage. False indicates impossibility to cover. This 
+	 * can happen because:
+	 * 1. {@link finalValue} is in within category and lies between the min coverage of a fallout 
+	 * and the max coverage of the next fallout making it impossible to achieve such a value
+	 * 2. {@link finalValue} is below the max magnification coverage
 	 */
 	strechToFit(finalValue: number,length:number,approximation=0.1) :boolean{
 		if(finalValue<=0){
@@ -203,21 +208,35 @@ export class NumberLine{
 				const minAboveCoverage = length * this.options.subdivisionFallout[0]/this.options.breakpoints[0];
 				for(let i =0;i<this.options.subdivisionFallout.length;i++){
 					const thisUnitValue = this.options.subdivisionFallout[i];
-					const unitLengthForThisFallout = thisUnitValue/valuePerLength;
+					// const unitLengthForThisFallout = thisUnitValue/valuePerLength;
 					const maxCoverage = length * thisUnitValue/this.options.breakpoints[0];
 					const minCoverage = length * thisUnitValue/this.options.breakpoints[1];
 					console.log('min,max',minCoverage,maxCoverage);
+					// debugger;
 					if(finalValue>=minCoverage && finalValue<=maxCoverage){
 						// answer has been found inside this fallout range
 						const magnificationForThisFallout = originalStartingMagnification+this.options.stretchModulo!*i;
 						const magnificationForNextFallout = originalStartingMagnification+(this.options.stretchModulo!*(i+1));
+						// how many units does it take to fit finalValue in given length
+						const c = finalValue/thisUnitValue;
+						// fit c units into a length to find unit value for this fallout
+						const unitLengthForThisFallout = length/c;
+						// const unitLengthForThisFallout = rangeMapper(
+						// 	finalValue,
+						// 	minCoverage,
+						// 	maxCoverage,
+						// 	this.options.breakpoints[0],
+						// 	this.options.breakpoints[1]
+						// )
 						this._magnification = rangeMapper(
-							finalValue,
-							minCoverage,
-							maxCoverage,
+							unitLengthForThisFallout,
+							this.options.breakpoints[0],
+							this.options.breakpoints[1],
 							magnificationForThisFallout,
-							magnificationForNextFallout,
+							magnificationForNextFallout
 						)
+
+						console.log(this._magnification);
 						this.computeScale();
 						return true;
 					}
