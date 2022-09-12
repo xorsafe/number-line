@@ -25,6 +25,7 @@ const numberScale:NumberLine = new NumberLine({
 	breakpoints:[100,180],
 	labelStrategy:numberScaleTickMarkStrategy,
 	pattern:[3,1,1,1,1,2,1,1,1,1],
+	unitLengthType:'rubber-band',
 	subdivisionFallout:[200,100,50,20,10],
 	maximumLengthOfLastSubdivision:500
 
@@ -110,6 +111,7 @@ class Home extends React.Component {
 					this.containerWidth = entry.contentRect.width;
 					// numberScale.strechToFit(3360,this.containerWidth);
 					numberScale.strechToFit(1900,this.containerWidth);
+					console.log("value at ",numberScale.valueAt(this.containerWidth,false));
 					// numberScale.rangeFit(-600,1200,this.containerWidth);
 					// numberScale.rangeFit(3000,6000,this.containerWidth);
 					console.log("Rebuilding number line view model for width "+this.containerWidth);

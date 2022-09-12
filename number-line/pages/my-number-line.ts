@@ -37,6 +37,25 @@ export interface INumberLineOptions{
 	 * @default 1 
 	 */
 	initialMagnification?:number;
+	/**
+	 * Behaviour of unit length with changing magnification/zoom
+	 * 
+	 * 1.rigid: Unit length doesn't change. Magnification only changes unit value.
+	 * Coverage is continious
+	 * 
+	 * 2.rubber-band: With increasing magnification unit length stretches from
+	 * the defined low towards high breakpoint values untill it snaps back to low
+	 * breakpoint value again to repeat the process. Unit value is computed based
+	 * on coverage and unit length. Coverage is continious.
+	 * 
+	 * 3.fallout: Inspired by tools like Sketch, this number line starts off with a
+	 * rigid unit length but beyond a certain magnfication, unit value dictates the
+	 * unit length. The unit length again stretches between low and high breakpoints
+	 * but every subsequent 'rubber-band' snap gets you to the next unit value as
+	 * defined by the {@link subdivisionFallout}. Because of this nature, coverage
+	 * may have gaps when going from one fallout value to the next.
+	 */
+	unitLengthType:'rigid'|'rubber-band'|'fallout';
 	/** 
 	 * Final descending unit values as magnification increases (see example).
 	 * This should always be descending and end with a positive number greater than 0.
@@ -87,7 +106,7 @@ export class NumberLine{
 	private _lastZoomValue!:number;
 	private _lastZoomAddress!:number;
 	private _lastZoomValid = false;
-	private _lastZoomScaleCategory!:'above'|'within'|'last';
+	private _lastZoomScaleCategory!:'above'|'elastic'|'within'|'last';
 	
 	constructor(private readonly _options:INumberLineOptions){
 		this.initialize();
@@ -164,7 +183,8 @@ export class NumberLine{
 	 * @returns True indicates successful coverage. False indicates impossibility to cover. This 
 	 * can happen because:
 	 * 1. {@link finalValue} is in within category and lies between the min coverage of a fallout 
-	 * and the max coverage of the next fallout making it impossible to achieve such a value
+	 * and the max coverage of the next fallout making it impossible to achieve such a value.
+	 * (To avoid this, use 'rubber-band' or 'rigid' unit length types)
 	 * 2. {@link finalValue} is below the max magnification coverage
 	 */
 	strechToFit(finalValue: number,length:number,approximation=0.1) :boolean{
@@ -174,7 +194,13 @@ export class NumberLine{
 		this._displacement = 0;
 		const existingMagnification = this.magnification;
 		const valuePerLength = finalValue/length;
-		if(this.options.subdivisionFallout==null || this.options.subdivisionFallout.length==0){
+		// handle the special case for rubber band unit length type
+		if(this.options.unitLengthType=='rubber-band'){
+			// finalValue is coverage for a the given length
+			this._magnification = (this.baseCoverageForElasticUnitScale*length)/(finalValue*this.options.breakpoints[1]);
+			this.computeScale();
+			return true;
+		}else if(this.options.unitLengthType=='rigid'||this.options.subdivisionFallout==null || this.options.subdivisionFallout.length==0){
 			console.log("no subdivisions");
 			this._unitLength = this.options.breakpoints[0];
 			this._unitValue = valuePerLength * this._unitLength;
@@ -202,32 +228,23 @@ export class NumberLine{
 				// 'within' scale category
 				// console.log('within scale category');
 
-				const originalStartingMagnification = this.options.baseUnitValue/this.options.subdivisionFallout[0];
-				const minUnitValue = valuePerLength * this.options.breakpoints[0];
-				const maxUnitValue = valuePerLength * this.options.breakpoints[1];
-				const minAboveCoverage = length * this.options.subdivisionFallout[0]/this.options.breakpoints[0];
+				const startingMagnification = this.options.baseUnitValue/this.options.subdivisionFallout[0];
+				
 				for(let i =0;i<this.options.subdivisionFallout.length;i++){
-					const thisUnitValue = this.options.subdivisionFallout[i];
-					// const unitLengthForThisFallout = thisUnitValue/valuePerLength;
+					const thisUnitValue = this.options.subdivisionFallout[i];					
 					const maxCoverage = length * thisUnitValue/this.options.breakpoints[0];
 					const minCoverage = length * thisUnitValue/this.options.breakpoints[1];
 					console.log('min,max',minCoverage,maxCoverage);
-					// debugger;
+					
 					if(finalValue>=minCoverage && finalValue<=maxCoverage){
 						// answer has been found inside this fallout range
-						const magnificationForThisFallout = originalStartingMagnification+this.options.stretchModulo!*i;
-						const magnificationForNextFallout = originalStartingMagnification+(this.options.stretchModulo!*(i+1));
+						const magnificationForThisFallout = startingMagnification+this.options.stretchModulo!*i;
+						const magnificationForNextFallout = startingMagnification+(this.options.stretchModulo!*(i+1));
 						// how many units does it take to fit finalValue in given length
 						const c = finalValue/thisUnitValue;
 						// fit c units into a length to find unit value for this fallout
 						const unitLengthForThisFallout = length/c;
-						// const unitLengthForThisFallout = rangeMapper(
-						// 	finalValue,
-						// 	minCoverage,
-						// 	maxCoverage,
-						// 	this.options.breakpoints[0],
-						// 	this.options.breakpoints[1]
-						// )
+						
 						this._magnification = rangeMapper(
 							unitLengthForThisFallout,
 							this.options.breakpoints[0],
@@ -236,76 +253,12 @@ export class NumberLine{
 							magnificationForNextFallout
 						)
 
-						console.log(this._magnification);
 						this.computeScale();
 						return true;
 					}
 					
-					// if(thisUnitValue>=minUnitValue && thisUnitValue<=maxUnitValue){
-					// if(this.withinBreakpointRange(unitLengthForThisFallout)){
-					// 	const magnificationForThisFallout = originalStartingMagnification+this.options.stretchModulo!*i;
-					// 	const magnificationForNextFallout = originalStartingMagnification+(this.options.stretchModulo!*(i+1));
-					// 	this._magnification = rangeMapper(
-					// 		unitLengthForThisFallout,
-					// 		this.options.breakpoints[0],
-					// 		this.options.breakpoints[1],
-					// 		magnificationForThisFallout,
-					// 		magnificationForNextFallout
-					// 	);
-					// 	this._magnification=originalStartingMagnification + this.options.baseUnitValue/(maxUnitValue - minUnitValue);
-					// 	this.computeScale();
-					// 	if(approx(this.valueAt(length,true),finalValue,approximation)){
-					// 		// console.log('found within');
-					// 		return true;
-					// 	}
-					// 	// return true;
-					// }
 				}
-				/*
-				// we do a binary search b/w the starting & ending magnification
-				// WARNING: changing variable names mysteriously returns undefined
-				let startingMag = this.options.baseUnitValue/this.options.subdivisionFallout[0];
-				let endingMag = startingMag + this.options.stretchModulo! * (this.options.subdivisionFallout.length-1);
-				// let endingMag = this.options.baseUnitValue/this.options.subdivisionFallout[this.options.subdivisionFallout.length-1];
 				
-				
-				this._magnification = (startingMag+endingMag)/2;
-				this.computeScale();
-				let middleValue = this.valueAt(length,true);
-
-				while(!approx(middleValue,finalValue,approximation) && startingMag!=endingMag){
-					debugger;
-					const middle= (startingMag+endingMag)/2;
-					// because the fallout range can be unevenly described in a descending order
-					// we need to range map binary search coordinates(middle) to fallout range coordinate
-					// for this, we find the fractional index location of the middle in the magnification range
-					const fractionalIndex = (middle - originalStartingMagnification)/this.options.stretchModulo!;
-					const falloutIndex = Math.floor(fractionalIndex);
-					const fraction = fractionalIndex%1;
-					const falloutDifference = this.options.subdivisionFallout[falloutIndex] - this.options.subdivisionFallout[falloutIndex + 1];
-					const translated = rangeMapper(
-						fraction * falloutDifference,
-						0,
-						falloutDifference,
-						originalStartingMagnification + this.options.stretchModulo! * falloutIndex,
-						originalStartingMagnification + this.options.stretchModulo! * (falloutIndex+1),
-						)
-
-					this._magnification = translated;
-					this.computeScale();
-					console.log("finding");
-					middleValue = this.valueAt(length,true);
-					if(approx(middleValue,finalValue,approximation)){
-						// console.log('found within');
-						return true;
-					}else if(middleValue<finalValue){
-						endingMag = middle;
-					}else{
-						startingMag = middle;
-					}
-				}
-				*/
-
 				// if it didn't survive 'within',
 				// scale is in the 'last' category
 				// console.log('trying last category');
@@ -372,10 +325,30 @@ export class NumberLine{
 		this._unitValue = this.options.baseUnitValue / this.magnification;
 		// compute the unit length based on which portion of the number line we are in
 		const scaleCategory = this.unitScaleCategory();
-		console.log("scale category",scaleCategory);
+		// console.log("scale category",scaleCategory);
 		if(scaleCategory=='above'){
 			// unit length is chosen to be lower breakpoint
 			this._unitLength = this.options.breakpoints[0];
+		}else if(scaleCategory=='elastic'){
+			
+			const domainValue = this.magnification%this.options.stretchModulo!;
+			this._unitLength = rangeMapper(
+				domainValue,
+				0,
+				this.options.stretchModulo!,
+				this.options.breakpoints[0],
+				this.options.breakpoints[1]);
+
+			// for any magnification, simply dividing baseCoverage by magnification,
+			// gives us the continous coverage
+			const coverage = this.baseCoverageForElasticUnitScale/this.magnification;
+			// console.log("bc,m,coverage",baseCoverage,this.magnification,coverage);
+			this._unitValue = coverage * this._unitLength/this.options.breakpoints[1];
+			
+			// IGNORE: we find a constant k such that when multiplied by magnification
+			// it gives us a continious coverage
+			// const k = baseCoverage*this.options.breakpoints[1]/baseUnitLength;
+			
 		}else if(scaleCategory=='within'){
 			
 			const startingMagnification = this.options.baseUnitValue/this.options.subdivisionFallout[0];
@@ -419,8 +392,13 @@ export class NumberLine{
 	 * @returns An enum representing which category the current number line 
 	 * configuration is in
 	 */
-	unitScaleCategory():'above'|'within'|'last'{
-
+	unitScaleCategory():'above'|'elastic'|'within'|'last'{
+		if(this.options.unitLengthType=='rigid'){
+			return 'above';
+		}else if(this.options.unitLengthType=='rubber-band'){
+			return 'elastic';
+		}
+		// else fallout:
 		if(this.options.subdivisionFallout==null || this.options.subdivisionFallout.length==0){
 			return 'above';
 		}else{
@@ -444,6 +422,23 @@ export class NumberLine{
 				}
 			}
 		}
+	}
+
+	get baseCoverageForElasticUnitScale():number{
+		// for given base unit value at a magnificatino of 1
+		// find the base unit length and then base coverage
+		const baseUnitLength = rangeMapper(
+			1,
+			0,
+			1.3,
+			this.options.breakpoints[0],
+			this.options.breakpoints[1])
+		
+		// for base coverage we can use any fixed length,
+		// so in this case we will assume the breakpoints[1]
+		const baseCoverage= this.options.breakpoints[1] * this.options.baseUnitValue/baseUnitLength;
+		return baseCoverage;
+		// return this.options.baseUnitValue;
 	}
 
 	/**
@@ -594,11 +589,12 @@ export class NumberLine{
 	 * @returns True if zoom was successful, false if zoom was out of range
 	 */
 	zoomAround(value:number,address:number,delta:number):boolean{
-		if(this._magnification+delta<=1){
+		if(this._magnification+delta<1){
 			return false;
 		}
 		
 		const before = this.locationOf(value,false);
+		console.log("before",before);
 		this._magnification+=delta;
 		this.computeScale();
 		const scaleCategory = this.unitScaleCategory();
@@ -613,6 +609,7 @@ export class NumberLine{
 		// TODO store the new magnfication in private lastZoomMagnification
 		const after = this.locationOf(value,false);
 		const cancelDifference = after - before;
+		console.log("cancelDifference",cancelDifference);
 		if(scaleCategory!='above'){
 			this._displacement+=cancelDifference;
 		}
@@ -628,6 +625,7 @@ export class NumberLine{
 				scaleCategory!='above'){
 				const difference = value - this._lastZoomValue;
 				const correction = (difference/this.unitValue)*this.unitLength;
+				console.log("coming here");
 				this._displacement-=correction;
 			}else{
 				this._lastZoomValue = value;
