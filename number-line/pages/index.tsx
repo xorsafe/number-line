@@ -2,7 +2,7 @@ import Head from 'next/head';
 import React, { createRef } from 'react';
 import Layout, { siteTitle } from '../components/layout';
 import utilStyles from '../styles/utils.module.css';
-import { NumberLine, ITickMarkLabelStrategy, NumberLineViewModel, TickMarkViewModel, isActuallyZero} from './my-number-line';
+import { NumberLine, ITickMarkLabelStrategy, NumberLineViewModel, TickMarkViewModel, isActuallyZero} from '../core/my-number-line';
 
 const numberScaleTickMarkStrategy:ITickMarkLabelStrategy={
 	labelFor(value,index,position,numberLine){
