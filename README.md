@@ -52,7 +52,7 @@ Making a simple number line is not hard but I think making a customizable and in
 ## Getting Started
 
 ```
-npm install numberline
+npm install number-line
 ```
 
 ```
