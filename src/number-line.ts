@@ -51,12 +51,12 @@ export interface INumberLineOptions{
 	 * ending value. Requires {@link finiteEnd} to be set. 
 	 * @default false
 	 */
-	strechToFit?:boolean;
+	stretchToFit?:boolean;
 }
 
 
 /** 
- * A strechable, zoomable number line view model that can
+ * A stretchable, zoomable number line view model that can
  * be used to construct functional rulers and graphs 
  */
 export class NumberLine{
@@ -84,13 +84,13 @@ export class NumberLine{
 		}else if(this.options.stretchModulo<=1){
 			throw new Error("Stretch modulo cannot be <=1");
 		}
-		this.options.strechToFit = this.options.strechToFit==undefined?false:this.options.strechToFit;
+		this.options.stretchToFit = this.options.stretchToFit==undefined?false:this.options.stretchToFit;
 		
 		this._magnification = this.options.initialMagnification;
 		this._displacement = this.options.initialDisplacement;
 		this.computeScale();
-		if(this.options.strechToFit && this.options.finiteEnd!=undefined){
-			this.strechToFit(this.options.finiteEnd);
+		if(this.options.stretchToFit && this.options.finiteEnd!=undefined){
+			this.stretchToFit(this.options.finiteEnd);
 		}
 	}
 
@@ -100,7 +100,7 @@ export class NumberLine{
 	 * {@link finalValue}
 	 * @param finalValue The last value on the number line
 	 */
-	strechToFit(finalValue: number) {
+	stretchToFit(finalValue: number) {
 		if(finalValue<=0){
 			throw new Error("Final value has to be positive. Consider using rangeFit instead");
 		}
@@ -119,7 +119,7 @@ export class NumberLine{
 			throw new Error("Ending value has to be greater than starting value");
 		}
 		const difference = endValue - startValue;
-		this.strechToFit(difference);
+		this.stretchToFit(difference);
 		this.moveBy(startValue*this.magnification);
 	}
 

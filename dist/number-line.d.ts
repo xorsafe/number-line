@@ -51,10 +51,10 @@ export interface INumberLineOptions {
      * ending value. Requires {@link finiteEnd} to be set.
      * @default false
      */
-    strechToFit?: boolean;
+    stretchToFit?: boolean;
 }
 /**
- * A strechable, zoomable number line view model that can
+ * A stretchable, zoomable number line view model that can
  * be used to construct functional rulers and graphs
  */
 export class NumberLine {
@@ -65,7 +65,7 @@ export class NumberLine {
      * {@link finalValue}
      * @param finalValue The last value on the number line
      */
-    strechToFit(finalValue: number): void;
+    stretchToFit(finalValue: number): void;
     /**
      * Fits a range within the base length
      * @param startValue Smaller value

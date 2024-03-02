@@ -6,7 +6,7 @@ Object.defineProperty($6bcaed30d64ae01e$exports, "__esModule", {
 $6bcaed30d64ae01e$exports.NumberLine = void 0;
 $6bcaed30d64ae01e$exports.rangeMapper = $6bcaed30d64ae01e$var$rangeMapper;
 /** Configurational description of the number line */ /** 
- * A strechable, zoomable number line view model that can
+ * A stretchable, zoomable number line view model that can
  * be used to construct functional rulers and graphs 
  */ class $6bcaed30d64ae01e$var$NumberLine {
     _displacement = 0;
@@ -24,18 +24,18 @@ $6bcaed30d64ae01e$exports.rangeMapper = $6bcaed30d64ae01e$var$rangeMapper;
         else if (this.options.initialMagnification < 0) throw new Error("Initial Magnfication can never be negative. Try a number between 0 and 1 if you want to zoom out");
         if (this.options.stretchModulo == undefined) this.options.stretchModulo = 1.3;
         else if (this.options.stretchModulo <= 1) throw new Error("Stretch modulo cannot be <=1");
-        this.options.strechToFit = this.options.strechToFit == undefined ? false : this.options.strechToFit;
+        this.options.stretchToFit = this.options.stretchToFit == undefined ? false : this.options.stretchToFit;
         this._magnification = this.options.initialMagnification;
         this._displacement = this.options.initialDisplacement;
         this.computeScale();
-        if (this.options.strechToFit && this.options.finiteEnd != undefined) this.strechToFit(this.options.finiteEnd);
+        if (this.options.stretchToFit && this.options.finiteEnd != undefined) this.stretchToFit(this.options.finiteEnd);
     }
     /**
    * Stretches the entire number line such that the first
    * value is the starting value(0) and the last value is the
    * {@link finalValue}
    * @param finalValue The last value on the number line
-   */ strechToFit(finalValue) {
+   */ stretchToFit(finalValue) {
         if (finalValue <= 0) throw new Error("Final value has to be positive. Consider using rangeFit instead");
         this._displacement = 0;
         this._magnification = this.baseCoverage / finalValue;
@@ -48,7 +48,7 @@ $6bcaed30d64ae01e$exports.rangeMapper = $6bcaed30d64ae01e$var$rangeMapper;
    */ rangeFit(startValue, endValue) {
         if (endValue <= startValue) throw new Error("Ending value has to be greater than starting value");
         const difference = endValue - startValue;
-        this.strechToFit(difference);
+        this.stretchToFit(difference);
         this.moveBy(startValue * this.magnification);
     }
     /** 

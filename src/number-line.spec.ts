@@ -31,7 +31,7 @@ describe("Number Line",()=>{
 
 	it("should normalize default options properly",()=>{
 		const numberLine = new NumberLine(defaultOptions);
-		expect(numberLine.options.strechToFit).toBe(false);
+		expect(numberLine.options.stretchToFit).toBe(false);
 		expect(numberLine.options.initialDisplacement).toBe(0);
 		expect(numberLine.options.initialMagnification).toBe(1);
 		expect(numberLine.options.finiteEnd).toBeUndefined();
@@ -48,7 +48,7 @@ describe("Number Line",()=>{
 
 	it("should stretch to fit a zoomed in value on the number line at construction",()=>{
 		const options = clone(defaultOptions);
-		options.strechToFit = true;
+		options.stretchToFit = true;
 		options.finiteEnd = 100;//<---------- less than base coverage of 146.06
 		const numberLine = new NumberLine(options);
 		expect(Math.abs(numberLine.lastValue-100)).toBeLessThanOrEqual(1);
@@ -57,13 +57,13 @@ describe("Number Line",()=>{
 
 	it("should stretch to fit a zoomed in value on the number after construction",()=>{
 		const numberLine = new NumberLine(defaultOptions);
-		numberLine.strechToFit(100);//<---------- less than base coverage of 146.06
+		numberLine.stretchToFit(100);//<---------- less than base coverage of 146.06
 		expect(Math.abs(numberLine.lastValue-100)).toBeLessThanOrEqual(1);
 	})
 
 	it("should stretch to fit a zoomed in value on the number line at construction",()=>{
 		const options = clone(defaultOptions);
-		options.strechToFit = true;
+		options.stretchToFit = true;
 		options.finiteEnd = 200;//<---------- greater than base coverage of 146.06
 		const numberLine = new NumberLine(options);
 		expect(Math.abs(numberLine.lastValue-200)).toBeLessThanOrEqual(1);
@@ -72,7 +72,7 @@ describe("Number Line",()=>{
 
 	it("should stretch to fit a zoomed in value on the number after construction",()=>{
 		const numberLine = new NumberLine(defaultOptions);
-		numberLine.strechToFit(300);//<---------- greater than base coverage of 146.06
+		numberLine.stretchToFit(300);//<---------- greater than base coverage of 146.06
 		expect(Math.abs(numberLine.lastValue-300)).toBeLessThanOrEqual(1);
 	})
 
