@@ -1,7 +1,7 @@
 {
 	"compileOnSave": false,
 	"compilerOptions": {
-	  "baseUrl": "./",
+	  "baseUrl": "./lib",
 	  "outDir": "./dist/out-tsc",
 	  "forceConsistentCasingInFileNames": true,
 	  "strict": true,
@@ -21,6 +21,7 @@
 	  "module": "es2020",
 	  "lib": [
 		"es2020",
+		"dom"
 	  ]
 	}
   }
