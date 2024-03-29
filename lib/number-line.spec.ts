@@ -38,22 +38,177 @@ describe("Number Line",()=>{
 
 	const labelStrategy:ITickMarkLabelStrategy={
 		labelFor:(value,index,position, numberLine)=>{
-			if(index==0){
-				return `${value}`;
+			if(index%5==0){
+				// return value in string to just on precision on floating point
+				return value.toFixed(0);
 			}
 			return null;
 		}
 		
 	}
-
 	const defaultOptions:INumberLineOptions={
 		pattern:[3,1,1,1,1,2,1,1,1,1],
-		breakpointLowerbound:5,
-		breakpointUpperBound:11.5,
-		baseCoverage:100,
+		breakpointLowerbound:100,
+		breakpointUpperBound:150,
+		baseCoverage:1000,
 		baseLength:100,
 		labelStrategy:labelStrategy
 	}
+
+
+	it("should give correct values at specified points",()=>{
+		const numberLine = new NumberLine(defaultOptions);
+		expect(numberLine.valueAt(0)).toBe(0);
+		expect(numberLine.valueAt(100)).toBe(10);
+		expect(numberLine.valueAt(200)).toBe(20);
+		expect(numberLine.valueAt(300)).toBe(30);
+		expect(numberLine.valueAt(400)).toBe(40);
+		expect(numberLine.valueAt(500)).toBe(50);
+		expect(numberLine.valueAt(600)).toBe(60);
+		expect(numberLine.valueAt(700)).toBe(70);
+		expect(numberLine.valueAt(800)).toBe(80);
+		expect(numberLine.valueAt(900)).toBe(90);
+		expect(numberLine.valueAt(1000)).toBe(100);
+
+		expect(numberLine.valueAt(-100)).toBe(-10);
+		expect(numberLine.valueAt(-200)).toBe(-20);
+		expect(numberLine.valueAt(-300)).toBe(-30);
+		expect(numberLine.valueAt(-400)).toBe(-40);
+		expect(numberLine.valueAt(-500)).toBe(-50);
+		expect(numberLine.valueAt(-600)).toBe(-60);
+		expect(numberLine.valueAt(-700)).toBe(-70);
+		expect(numberLine.valueAt(-800)).toBe(-80);
+		expect(numberLine.valueAt(-900)).toBe(-90);
+		expect(numberLine.valueAt(-1000)).toBe(-100);
+
+		// should give correct value at number line after it has been shifted in the positive axis
+		numberLine.panBy(130);
+		expect(numberLine.valueAt(0)).toBe(13);
+		expect(numberLine.valueAt(10000)).toBe(1013);
+		
+	})
+
+	it('should measure the value for a given length',()=>{
+		const numberLine = new NumberLine(defaultOptions);
+		expect(numberLine.measure(0)).toBe(0);
+		expect(numberLine.measure(100)).toBe(10);
+		expect(numberLine.measure(200)).toBe(20);
+		expect(numberLine.measure(300)).toBe(30);
+		expect(numberLine.measure(400)).toBe(40);
+		expect(numberLine.measure(500)).toBe(50);
+		expect(numberLine.measure(600)).toBe(60);
+		expect(numberLine.measure(700)).toBe(70);
+	})
+
+	it('should give the position of a value in the number line',()=>{
+		const numberLine = new NumberLine(defaultOptions);
+		expect(numberLine.positionOf(0)).toBe(0);
+		expect(numberLine.positionOf(10)).toBe(100);
+		expect(numberLine.positionOf(20)).toBe(200);
+		expect(numberLine.positionOf(30)).toBe(300);
+		expect(numberLine.positionOf(40)).toBe(400);
+		expect(numberLine.positionOf(50)).toBe(500);
+		expect(numberLine.positionOf(60)).toBe(600);
+		expect(numberLine.positionOf(70)).toBe(700);
+		expect(numberLine.positionOf(80)).toBe(800);
+		expect(numberLine.positionOf(90)).toBe(900);
+		expect(numberLine.positionOf(100)).toBe(1000);
+	})
+
+	it('should build a view model for the default case',()=>{
+		const numberLine = new NumberLine(defaultOptions);
+		const viewModel = numberLine.buildViewModel(10000);
+		expect(viewModel.offset).toBe(0);
+		expect(viewModel.leftoverSpace).toBe(0);
+		expect(viewModel.gap).toBe(10);
+		expect(viewModel.tickMarks.length).toBe(1000);
+		expect(viewModel.length).toBe(10000);
+		expect(viewModel.endingValue).toBe(1000);
+		expect(viewModel.startingValue).toBe(0);
+
+		// check all the tick marks
+		for(let i=0;i<viewModel.tickMarks.length;i++){
+			expect(viewModel.tickMarks[i].position).toBe(i*10);
+			if(i%5==0){
+				expect(viewModel.tickMarks[i].label).toBeDefined();
+			}else{
+				expect(viewModel.tickMarks[i].label).toBeNull();
+			}
+
+			if(i%10==0){
+				expect(viewModel.tickMarks[i].height).toBe(3);
+			}else if(i%5==0){
+				expect(viewModel.tickMarks[i].height).toBe(2);
+			}else{
+				expect(viewModel.tickMarks[i].height).toBe(1);
+			}
+		}
+		
+	})
+
+	it('should build a view model for the default case after shifting along the positive axis',()=>{
+		const numberLine = new NumberLine(defaultOptions);
+		numberLine.panBy(130);
+		const viewModel = numberLine.buildViewModel(10000);
+		expect(viewModel.offset).toBe(0);
+		expect(viewModel.leftoverSpace).toBe(0);
+		expect(viewModel.gap).toBe(10);
+		expect(viewModel.tickMarks.length).toBe(1000);
+		expect(viewModel.length).toBe(10000);
+		expect(viewModel.startingValue).toBe(13);
+		expect(viewModel.endingValue).toBe(1013);
+
+		// check all the tick marks
+		for(let i=0;i<viewModel.tickMarks.length;i++){
+			expect(viewModel.tickMarks[i].position).toBe(i*10);
+			if(viewModel.tickMarks[i].value%5==0){
+				expect(viewModel.tickMarks[i].label).toBeDefined();
+			}else{
+				expect(viewModel.tickMarks[i].label).toBeNull();
+			}
+
+			if(viewModel.tickMarks[i].value%10==0){
+				expect(viewModel.tickMarks[i].height).toBe(3);
+			}else if(viewModel.tickMarks[i].value%5==0){
+				expect(viewModel.tickMarks[i].height).toBe(2);
+			}else{
+				expect(viewModel.tickMarks[i].height).toBe(1);
+			}
+		}
+		
+	})
+
+	it('should build a view model for the default case after shifting along the negative axis',()=>{
+		const numberLine = new NumberLine(defaultOptions);
+		numberLine.panBy(-130);
+		const viewModel = numberLine.buildViewModel(10000);
+		expect(viewModel.offset).toBe(0);
+		expect(viewModel.leftoverSpace).toBe(0);
+		expect(viewModel.gap).toBe(10);
+		expect(viewModel.tickMarks.length).toBe(1000);
+		expect(viewModel.length).toBe(10000);
+		expect(viewModel.startingValue).toBe(-13);
+		expect(viewModel.endingValue).toBe(987);
+
+		// check all the tick marks
+		for(let i=0;i<viewModel.tickMarks.length;i++){
+			expect(viewModel.tickMarks[i].position).toBe(i*10);
+			if(viewModel.tickMarks[i].value%5==0){
+				expect(viewModel.tickMarks[i].label).toBeDefined();
+			}else{
+				expect(viewModel.tickMarks[i].label).toBeNull();
+			}
+
+			if(viewModel.tickMarks[i].value%10==0){
+				expect(viewModel.tickMarks[i].height).toBe(3);
+			}else if(viewModel.tickMarks[i].value%5==0){
+				expect(viewModel.tickMarks[i].height).toBe(2);
+			}else{
+				expect(viewModel.tickMarks[i].height).toBe(1);
+			}
+		}
+		
+	})
 
 })
 

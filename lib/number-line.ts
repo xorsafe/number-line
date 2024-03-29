@@ -57,6 +57,7 @@ export class NumberLine {
 	private _unitValue: number;
 	private _magnification: number;
 	private _displacement: number;
+	private _biggestTickPatternValue: number;
 
 	constructor(private options: INumberLineOptions) {
 		this.initialize();
@@ -74,6 +75,7 @@ export class NumberLine {
 		if(this.options.zoomFactor<=0){
 			throw new Error("Zoom factor cannot be negative or zero");
 		}
+		this._biggestTickPatternValue = this.options.pattern.reduce((a, b) => Math.max(a, b), 0);
 		this.options.zoomStep = this.options.zoomStep || 10;
 		this.options.zoomFactor = this.options.zoomFactor || 1;
 		this.zoomTo(this.options.initialMagnification || 0);
@@ -82,6 +84,10 @@ export class NumberLine {
 
 	private getBaseUnitValue(): number {
 		return this.options.baseCoverage / this.options.baseLength;
+	}
+
+	get biggestTickPatternValue():number{
+		return this._biggestTickPatternValue;
 	}
 
 	get unitLength(): number {
@@ -165,7 +171,7 @@ export class NumberLine {
 	 * @param {number} position - The position at which to calculate the value.
 	 */
 	valueAt(position:number):number{
-		return (position - this._displacement) / (this._unitLength/this._unitValue);
+		return (position + this._displacement) / (this._unitLength/this._unitValue);
 	}
 
 	/**
@@ -173,7 +179,7 @@ export class NumberLine {
 	 * @param length Length of the number line in whatever unit is used for rendering it(most likely in pixels)
 	 */
 	measure(length:number):number{
-		return this._unitLength/this._unitValue * length;
+		return this._unitValue/this._unitLength * length;
 	}
 
 	/** Number of tick marks in a unit */
@@ -206,8 +212,9 @@ export class NumberLine {
 			const tickCountsTillFirstTick = Math.floor((-this.displacement/unitLength)*this.tickCount)
 			totalNegativeTicks = tickCountsTillFirstTick;
 			firstTickMarkValue = -tickCountsTillFirstTick*tickValue;
-			firstTickMarkIndex = this.tickCount - tickCountsTillFirstTick % this.tickCount - 1;
-			firstTickMarkPosition = tickCountsTillFirstTick*tickGap - this.displacement;
+			// firstTickMarkIndex = this.tickCount - tickCountsTillFirstTick % this.tickCount - 1;
+			firstTickMarkIndex = this.tickCount - tickCountsTillFirstTick % this.tickCount;
+			firstTickMarkPosition = tickCountsTillFirstTick*tickGap + this.displacement;
 		}
 
 		const totalTicks = Math.floor((length - firstTickMarkPosition)/tickGap);
@@ -250,13 +257,16 @@ export class NumberLine {
 							null
 				}
 				numberLineViewModel.tickMarks.push(tickMarkViewModel);
-				const indexIncrementer = negativeTicksLeft>0?-1:1;
-				currentTickIndex+=indexIncrementer;
-				if(currentTickIndex<0){
-					currentTickIndex=this.tickCount-1;
-				}else if(currentTickIndex>=this.tickCount){
-					currentTickIndex = 0;
-				}
+				// const indexIncrementer = negativeTicksLeft>0?-1:1;
+				// currentTickIndex+=indexIncrementer;
+				// if(currentTickIndex<0){
+				// 	currentTickIndex=this.tickCount-1;
+				// }else if(currentTickIndex>=this.tickCount){
+				// 	currentTickIndex = 0;
+				// }
+
+				currentTickIndex = currentTickIndex + 1 < this.tickCount ? currentTickIndex + 1 : 0;
+
 		}
 
 		return numberLineViewModel;
