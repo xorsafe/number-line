@@ -213,12 +213,15 @@ export class NumberLine {
 			totalNegativeTicks = tickCountsTillFirstTick;
 			firstTickMarkValue = -tickCountsTillFirstTick*tickValue;
 			// firstTickMarkIndex = this.tickCount - tickCountsTillFirstTick % this.tickCount - 1;
-			firstTickMarkIndex = this.tickCount - tickCountsTillFirstTick % this.tickCount;
-			firstTickMarkPosition = tickCountsTillFirstTick*tickGap + this.displacement;
+			// firstTickMarkIndex = this.tickCount - tickCountsTillFirstTick % this.tickCount;
+			firstTickMarkIndex = tickCountsTillFirstTick % this.tickCount== 0 ? 0 : this.tickCount - tickCountsTillFirstTick % this.tickCount;
+			// firstTickMarkPosition = tickCountsTillFirstTick*tickGap + this.displacement;
+			firstTickMarkPosition = Math.abs(this.displacement) - tickCountsTillFirstTick*tickGap;
 		}
 
-		const totalTicks = Math.floor((length - firstTickMarkPosition)/tickGap);
-		const leftoverSpace = length - totalTicks*tickGap;
+		const totalTicks = Math.floor((length - firstTickMarkPosition)/tickGap) + 1;
+		// const leftoverSpace = length - totalTicks*tickGap;
+		const leftoverSpace = tickGap - firstTickMarkPosition;
 
 		const numberLineViewModel:NumberLineViewModel = {
 			offset:firstTickMarkPosition,

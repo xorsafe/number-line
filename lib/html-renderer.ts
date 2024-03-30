@@ -76,6 +76,7 @@ function createLabel(tickMark: TickMarkViewModel):HTMLDivElement {
 	label.style.left = `${tickMark.position}px`;
 	label.innerHTML = tickMark.label;
 	label.style.top = `100%`;
+	label.style.userSelect = 'none';
 	label.style.transform = 'translate(-50%,0%)';
 	return label;
 }

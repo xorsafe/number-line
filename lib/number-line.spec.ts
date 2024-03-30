@@ -119,9 +119,9 @@ describe("Number Line",()=>{
 		const numberLine = new NumberLine(defaultOptions);
 		const viewModel = numberLine.buildViewModel(10000);
 		expect(viewModel.offset).toBe(0);
-		expect(viewModel.leftoverSpace).toBe(0);
+		expect(viewModel.leftoverSpace).toBe(10);
 		expect(viewModel.gap).toBe(10);
-		expect(viewModel.tickMarks.length).toBe(1000);
+		expect(viewModel.tickMarks.length).toBe(1001);
 		expect(viewModel.length).toBe(10000);
 		expect(viewModel.endingValue).toBe(1000);
 		expect(viewModel.startingValue).toBe(0);
@@ -151,9 +151,9 @@ describe("Number Line",()=>{
 		numberLine.panBy(130);
 		const viewModel = numberLine.buildViewModel(10000);
 		expect(viewModel.offset).toBe(0);
-		expect(viewModel.leftoverSpace).toBe(0);
+		expect(viewModel.leftoverSpace).toBe(10);
 		expect(viewModel.gap).toBe(10);
-		expect(viewModel.tickMarks.length).toBe(1000);
+		expect(viewModel.tickMarks.length).toBe(1001);
 		expect(viewModel.length).toBe(10000);
 		expect(viewModel.startingValue).toBe(13);
 		expect(viewModel.endingValue).toBe(1013);
@@ -183,9 +183,9 @@ describe("Number Line",()=>{
 		numberLine.panBy(-130);
 		const viewModel = numberLine.buildViewModel(10000);
 		expect(viewModel.offset).toBe(0);
-		expect(viewModel.leftoverSpace).toBe(0);
+		expect(viewModel.leftoverSpace).toBe(10);
 		expect(viewModel.gap).toBe(10);
-		expect(viewModel.tickMarks.length).toBe(1000);
+		expect(viewModel.tickMarks.length).toBe(1001);
 		expect(viewModel.length).toBe(10000);
 		expect(viewModel.startingValue).toBe(-13);
 		expect(viewModel.endingValue).toBe(987);
@@ -193,6 +193,44 @@ describe("Number Line",()=>{
 		// check all the tick marks
 		for(let i=0;i<viewModel.tickMarks.length;i++){
 			expect(viewModel.tickMarks[i].position).toBe(i*10);
+			if(viewModel.tickMarks[i].value%5==0){
+				expect(viewModel.tickMarks[i].label).toBeDefined();
+			}else{
+				expect(viewModel.tickMarks[i].label).toBeNull();
+			}
+
+			if(viewModel.tickMarks[i].value%10==0){
+				expect(viewModel.tickMarks[i].height).toBe(3);
+			}else if(viewModel.tickMarks[i].value%5==0){
+				expect(viewModel.tickMarks[i].height).toBe(2);
+			}else{
+				expect(viewModel.tickMarks[i].height).toBe(1);
+			}
+		}
+		
+	})
+
+	it('should build a view model for the default case after shifting along the negative axis fractionally before the first tick',()=>{
+		const numberLine = new NumberLine(defaultOptions);
+		numberLine.panBy(-205);
+		const viewModel = numberLine.buildViewModel(10000);
+		expect(viewModel.offset).toBe(5);
+		expect(viewModel.gap).toBe(10);
+		expect(viewModel.length).toBe(10000);
+		expect(viewModel.startingValue).toBe(-20.5);
+		expect(viewModel.endingValue).toBe(979.5);
+		expect(viewModel.tickMarks.length).toBe(1000);
+		expect(viewModel.tickMarks[0].position).toBe(5);
+		expect(viewModel.tickMarks[0].value).toBe(-20);
+		expect(viewModel.tickMarks[0].label).toBe("-20");
+		expect(viewModel.tickMarks[0].height).toBe(3);
+		expect(viewModel.leftoverSpace).toBe(5);
+
+
+		// check all the tick marks
+		for(let i=0;i<viewModel.tickMarks.length;i++){
+			expect(viewModel.tickMarks[i].position).toBe(5+i*10);
+
 			if(viewModel.tickMarks[i].value%5==0){
 				expect(viewModel.tickMarks[i].label).toBeDefined();
 			}else{

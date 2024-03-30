@@ -22,7 +22,8 @@ const defaultOptions:INumberLineOptions={
 
 
 const numberLine = new NumberLine(defaultOptions);
-
+// numberLine.panBy(-205);
+// numberLine.panBy(-130);
 const panDiv = document.querySelector("#pan") as HTMLElement;
 render(numberLine,panDiv);
 
