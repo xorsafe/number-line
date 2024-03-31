@@ -1,4 +1,4 @@
-import { INumberLineOptions, ITickMarkLabelStrategy, NumberLine, rangeMapper, sawtooth, staircase } from "./number-line";
+import { INumberLineOptions, ITickMarkLabelStrategy, NumberLine, rangeMapper, sawtooth, doubleOriginStaircase } from "./number-line";
 
 
 describe("Utility",()=>{
@@ -16,20 +16,20 @@ describe("Utility",()=>{
 	})
 
 	it('should give correct values in staircase wave',()=>{
-		const y1 = staircase(5,5,10);
-		expect(y1).toBeCloseTo(0,1);
+		const y1 = doubleOriginStaircase(5,5,10);
+		expect(y1).toBeCloseTo(5,1);
 
-		const y2 = staircase(45,10,50);
-		expect(y2).toBeCloseTo(0,1);
+		const y2 = doubleOriginStaircase(45,10,50);
+		expect(y2).toBeCloseTo(10,1);
 
-		const y3 = staircase(90,10,50);
-		expect(y3).toBeCloseTo(10,1);
+		const y3 = doubleOriginStaircase(90,10,50);
+		expect(y3).toBeCloseTo(20,1);
 
 		// negative values
-		const y4 = staircase(-5,10,50);
+		const y4 = doubleOriginStaircase(-5,10,50);
 		expect(y4).toBeCloseTo(-10,1);
 
-		const y5 = staircase(-105,10,50);
+		const y5 = doubleOriginStaircase(-105,10,50);
 		expect(y5).toBeCloseTo(-30,1);
 	})
 })
@@ -251,6 +251,7 @@ describe("Number Line",()=>{
 	it('should build a view model after zooming to a particular value',()=>{
 		const numberLine = new NumberLine(defaultOptions);
 		numberLine.zoomTo(5);
+		expect(numberLine.magnification).toBe(5);
 		expect(numberLine.unitLength).toBe(125);
 		expect(numberLine.unitValue).toBe(10);
 		const viewModel = numberLine.buildViewModel(10000);
@@ -265,6 +266,41 @@ describe("Number Line",()=>{
 		// check all the tick marks
 		for(let i=0;i<viewModel.tickMarks.length;i++){
 			expect(viewModel.tickMarks[i].position).toBe(i*12.5);
+			if(i%5==0){
+				expect(viewModel.tickMarks[i].label).toBeDefined();
+			}else{
+				expect(viewModel.tickMarks[i].label).toBeNull();
+			}
+
+			if(i%10==0){
+				expect(viewModel.tickMarks[i].height).toBe(3);
+			}else if(i%5==0){
+				expect(viewModel.tickMarks[i].height).toBe(2);
+			}else{
+				expect(viewModel.tickMarks[i].height).toBe(1);
+			}
+		}
+		
+	})
+
+	it('should build a view model after zooming to a value beyond the unit length stretch limits',()=>{
+		const numberLine = new NumberLine(defaultOptions);
+		numberLine.zoomTo(10);
+		expect(numberLine.magnification).toBe(10);
+		expect(numberLine.unitLength).toBe(100);
+		expect(numberLine.unitValue).toBe(5);
+		const viewModel = numberLine.buildViewModel(10000);
+		expect(viewModel.offset).toBe(0);
+		expect(viewModel.startingValue).toBe(0);
+		expect(viewModel.gap).toBe(10);
+		expect(viewModel.leftoverSpace).toBe(10);
+		expect(viewModel.tickMarks.length).toBe(1001);
+		expect(viewModel.length).toBe(10000);
+		expect(viewModel.endingValue).toBe(500);
+
+		// check all the tick marks
+		for(let i=0;i<viewModel.tickMarks.length;i++){
+			expect(viewModel.tickMarks[i].position).toBe(i*10);
 			if(i%5==0){
 				expect(viewModel.tickMarks[i].label).toBeDefined();
 			}else{
@@ -308,6 +344,81 @@ describe("Number Line",()=>{
 			if(i%10==0){
 				expect(viewModel.tickMarks[i].height).toBe(3);
 			}else if(i%5==0){
+				expect(viewModel.tickMarks[i].height).toBe(2);
+			}else{
+				expect(viewModel.tickMarks[i].height).toBe(1);
+			}
+		}
+		
+	})
+
+	it('should build a view model after zooming around a positive position by a particular value',()=>{
+		const numberLine = new NumberLine(defaultOptions);
+		numberLine.zoomAround(300,5);
+		expect(numberLine.unitLength).toBe(125);
+		expect(numberLine.unitValue).toBe(10);
+		const viewModel = numberLine.buildViewModel(10000);
+		expect(viewModel.offset).toBe(0);
+		expect(viewModel.startingValue).toBe(6);
+		expect(viewModel.gap).toBe(12.5);
+		expect(viewModel.leftoverSpace).toBe(12.5);
+		expect(viewModel.tickMarks.length).toBe(801);
+		expect(viewModel.length).toBe(10000);
+		expect(viewModel.endingValue).toBe(806);
+
+		// check all the tick marks
+		for(let i=0;i<viewModel.tickMarks.length;i++){
+			expect(viewModel.tickMarks[i].position).toBe(i*12.5);
+			const offsetIndex = i -4;
+			
+			if(offsetIndex%5==0){
+				expect(viewModel.tickMarks[i].label).toBeDefined();
+			}else{
+				expect(viewModel.tickMarks[i].label).toBeNull();
+			}
+
+			if(offsetIndex%10==0){
+				expect(viewModel.tickMarks[i].height).toBe(3);
+			}else if(offsetIndex%5==0){
+				expect(viewModel.tickMarks[i].height).toBe(2);
+			}else{
+				expect(viewModel.tickMarks[i].height).toBe(1);
+			}
+		}
+		
+	})
+
+	it('should build a view model after zooming around a positive position by a particular value done multiple times',()=>{
+		const numberLine = new NumberLine(defaultOptions);
+		numberLine.zoomAround(300,1);
+		numberLine.zoomAround(300,1);
+		numberLine.zoomAround(300,2);
+		numberLine.zoomAround(300,1);
+		expect(numberLine.unitLength).toBe(125);
+		expect(numberLine.unitValue).toBe(10);
+		const viewModel = numberLine.buildViewModel(10000);
+		expect(viewModel.offset).toBe(0);
+		expect(viewModel.startingValue).toBe(6);
+		expect(viewModel.gap).toBe(12.5);
+		expect(viewModel.leftoverSpace).toBe(12.5);
+		expect(viewModel.tickMarks.length).toBe(801);
+		expect(viewModel.length).toBe(10000);
+		expect(viewModel.endingValue).toBe(806);
+
+		// check all the tick marks
+		for(let i=0;i<viewModel.tickMarks.length;i++){
+			expect(viewModel.tickMarks[i].position).toBe(i*12.5);
+			const offsetIndex = i -4;
+
+			if(offsetIndex%5==0){
+				expect(viewModel.tickMarks[i].label).toBeDefined();
+			}else{
+				expect(viewModel.tickMarks[i].label).toBeNull();
+			}
+
+			if(offsetIndex%10==0){
+				expect(viewModel.tickMarks[i].height).toBe(3);
+			}else if(offsetIndex%5==0){
 				expect(viewModel.tickMarks[i].height).toBe(2);
 			}else{
 				expect(viewModel.tickMarks[i].height).toBe(1);

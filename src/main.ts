@@ -46,7 +46,12 @@ panDiv.onmousemove = (event)=>{
 
 const zoomLine = new NumberLine(defaultOptions);
 // zoomLine.zoomBy(-205);
-// zoomLine.zoomAround(0,5);
+// zoomLine.zoomAround(300,5);
+// zoomLine.zoomAround(300,1);
+// zoomLine.zoomAround(300,1);
+// zoomLine.zoomAround(300,2);
+// zoomLine.zoomAround(300,1);
+
 const zoomDiv = document.querySelector("#positional-zoom") as HTMLElement;
 render(zoomLine,zoomDiv);
 
@@ -65,10 +70,14 @@ zoomDiv.onmousemove = (event)=>{
 		lastXInZoomDiv = event.clientX;
 	}
 }
+
 zoomDiv.onwheel = (event)=>{
 	if(event.metaKey || event.ctrlKey){
+		console.log(event.deltaY * 0.001);
 		zoomLine.zoomAround(event.clientX, event.deltaY);
+		console.log(zoomLine.magnification);
 	}
+
 	// remove all children from zoomDiv element
 	zoomDiv.innerHTML = '';
 	render(zoomLine,zoomDiv);

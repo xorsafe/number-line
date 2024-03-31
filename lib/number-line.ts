@@ -110,8 +110,9 @@ export class NumberLine {
 	 * @return {void} 
 	 */
 	zoomTo(magnification: number):void {
+		this._magnification = magnification;
 		this._unitLength = sawtooth(magnification, this.options.breakpointLowerbound, this.options.breakpointUpperBound, this.options.zoomStep);
-		const level = staircase(magnification, this.options.zoomFactor, this.options.zoomStep);
+		const level = doubleOriginStaircase(magnification, this.options.zoomFactor, this.options.zoomStep);
 		if(level==0){
 			this._unitValue = this.getBaseUnitValue();
 		}else if(level>0){
@@ -122,10 +123,12 @@ export class NumberLine {
 	}
 
     /**
-     * Zooms around a position by a specified amount.
+     * Zooms around a position by a specified amount. This can be used in an event
+	 * like mouse wheel or pinch to zoom. 
      *
-     * @param {number} position - The position to zoom around. This position will be frozen throughout the zoom.
-     * @param {number} by - The delta amount to zoom by.
+     * @param {number} position - The position to zoom around. This position will be frozen throughout the zoom. As obtained from the event.
+     * @param {number} by - The delta amount to zoom by. Large numbers might cause erreneous big jumps that are undesirable.
+	 * Consider multiplying by a limiting factor (like 0.001) to prevent this.
      */
 	zoomAround(position: number, by: number) {
 		const originalDisplacement = this.displacement;
@@ -134,7 +137,9 @@ export class NumberLine {
 		this.zoomTo(this.magnification + by);
 		const newPositionForHingePoint = this.positionOf(valueAtHingePoint);
 		const shift = newPositionForHingePoint - position;
-		const newDisplacement = originalDisplacement - shift;
+		// const newDisplacement = originalDisplacement + shift;
+		const newDisplacement = shift;
+		
 		this.panTo(newDisplacement);
 	}
 
@@ -284,14 +289,23 @@ export function sawtooth(x: number, lowerBound: number, upperBound: number, peri
 
 /**
  * Calculates the y-coordinate of a point on a staircase based on the given x-coordinate, height, and period.
+ * The staircase function has two levels of height at origin.
+ * One in the positive y axis and one in the negative y axis.
  *
  * @param {number} x - The x-coordinate of the point.
  * @param {number} height - The height of each step on the staircase.
  * @param {number} period - The period of the staircase.
  * @return {number} The y-coordinate of the point on the staircase.
  */
-export function staircase(x: number, height: number, period: number): number {
-	const steps = Math.floor(x / period);
+export function doubleOriginStaircase(x: number, height: number, period: number): number {
+	let steps:number = 0;
+	if (x == 0) {
+		return 0;
+	}else if(x > 0){
+		steps = Math.floor(x / period)+1;
+	}else{
+		steps = Math.floor(x / period);
+	}
 	const y = steps * height;
 	return y;
 }
