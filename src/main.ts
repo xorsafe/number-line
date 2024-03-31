@@ -21,11 +21,11 @@ const defaultOptions:INumberLineOptions={
 }
 
 
-const numberLine = new NumberLine(defaultOptions);
-// numberLine.panBy(-205);
-// numberLine.panBy(-130);
+const panLine = new NumberLine(defaultOptions);
+// panLine.panBy(-205);
+// panLine.panBy(-130);
 const panDiv = document.querySelector("#pan") as HTMLElement;
-render(numberLine,panDiv);
+render(panLine,panDiv);
 
 let draggingPanDiv = false;
 let lastX = -1;
@@ -34,11 +34,42 @@ panDiv.onmousedown = (event)=>{draggingPanDiv = true,lastX = event.clientX;}
 panDiv.onmouseup = (event)=>{draggingPanDiv = false}
 panDiv.onmousemove = (event)=>{
 	if(draggingPanDiv){
-		numberLine.panBy(lastX - event.clientX);
+		panLine.panBy(lastX - event.clientX);
 		// remove all children from panDiv element
 		panDiv.innerHTML = '';
-		render(numberLine,panDiv);
+		render(panLine,panDiv);
 
 		lastX = event.clientX;
 	}
+}
+
+
+const zoomLine = new NumberLine(defaultOptions);
+// zoomLine.zoomBy(-205);
+// zoomLine.zoomAround(0,5);
+const zoomDiv = document.querySelector("#positional-zoom") as HTMLElement;
+render(zoomLine,zoomDiv);
+
+let draggingzoomDiv = false;
+let lastXInZoomDiv = -1;
+
+zoomDiv.onmousedown = (event)=>{draggingzoomDiv = true,lastXInZoomDiv = event.clientX;}
+zoomDiv.onmouseup = (event)=>{draggingzoomDiv = false}
+zoomDiv.onmousemove = (event)=>{
+	if(draggingzoomDiv){
+		zoomLine.panBy(lastXInZoomDiv - event.clientX);
+		// remove all children from zoomDiv element
+		zoomDiv.innerHTML = '';
+		render(zoomLine,zoomDiv);
+
+		lastXInZoomDiv = event.clientX;
+	}
+}
+zoomDiv.onwheel = (event)=>{
+	if(event.metaKey || event.ctrlKey){
+		zoomLine.zoomAround(event.clientX, event.deltaY);
+	}
+	// remove all children from zoomDiv element
+	zoomDiv.innerHTML = '';
+	render(zoomLine,zoomDiv);
 }

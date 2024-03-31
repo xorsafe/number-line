@@ -248,6 +248,75 @@ describe("Number Line",()=>{
 		
 	})
 
+	it('should build a view model after zooming to a particular value',()=>{
+		const numberLine = new NumberLine(defaultOptions);
+		numberLine.zoomTo(5);
+		expect(numberLine.unitLength).toBe(125);
+		expect(numberLine.unitValue).toBe(10);
+		const viewModel = numberLine.buildViewModel(10000);
+		expect(viewModel.offset).toBe(0);
+		expect(viewModel.startingValue).toBe(0);
+		expect(viewModel.gap).toBe(12.5);
+		expect(viewModel.leftoverSpace).toBe(12.5);
+		expect(viewModel.tickMarks.length).toBe(801);
+		expect(viewModel.length).toBe(10000);
+		expect(viewModel.endingValue).toBe(800);
+
+		// check all the tick marks
+		for(let i=0;i<viewModel.tickMarks.length;i++){
+			expect(viewModel.tickMarks[i].position).toBe(i*12.5);
+			if(i%5==0){
+				expect(viewModel.tickMarks[i].label).toBeDefined();
+			}else{
+				expect(viewModel.tickMarks[i].label).toBeNull();
+			}
+
+			if(i%10==0){
+				expect(viewModel.tickMarks[i].height).toBe(3);
+			}else if(i%5==0){
+				expect(viewModel.tickMarks[i].height).toBe(2);
+			}else{
+				expect(viewModel.tickMarks[i].height).toBe(1);
+			}
+		}
+		
+	})
+
+	it('should build a view model after zooming around the origin by a particular value',()=>{
+		const numberLine = new NumberLine(defaultOptions);
+		numberLine.zoomAround(0,5);
+		expect(numberLine.unitLength).toBe(125);
+		expect(numberLine.unitValue).toBe(10);
+		const viewModel = numberLine.buildViewModel(10000);
+		expect(viewModel.offset).toBe(0);
+		expect(viewModel.startingValue).toBe(0);
+		expect(viewModel.gap).toBe(12.5);
+		expect(viewModel.leftoverSpace).toBe(12.5);
+		expect(viewModel.tickMarks.length).toBe(801);
+		expect(viewModel.length).toBe(10000);
+		expect(viewModel.endingValue).toBe(800);
+
+		// check all the tick marks
+		for(let i=0;i<viewModel.tickMarks.length;i++){
+			expect(viewModel.tickMarks[i].position).toBe(i*12.5);
+			if(i%5==0){
+				expect(viewModel.tickMarks[i].label).toBeDefined();
+			}else{
+				expect(viewModel.tickMarks[i].label).toBeNull();
+			}
+
+			if(i%10==0){
+				expect(viewModel.tickMarks[i].height).toBe(3);
+			}else if(i%5==0){
+				expect(viewModel.tickMarks[i].height).toBe(2);
+			}else{
+				expect(viewModel.tickMarks[i].height).toBe(1);
+			}
+		}
+		
+	})
+
+
 })
 
 function clone(options:INumberLineOptions):INumberLineOptions{
