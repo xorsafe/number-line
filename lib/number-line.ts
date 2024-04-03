@@ -59,6 +59,8 @@ export class NumberLine {
 	private _displacement: number;
 	private _biggestTickPatternValue: number;
 
+	private _baseUnitValueAdjusted: number;
+
 	constructor(private options: INumberLineOptions) {
 		this.initialize();
 	}
@@ -68,7 +70,9 @@ export class NumberLine {
 			throw new Error("Breakpoint lower bound cannot be greater than breakpoint upper bound");
 		}
 		this._unitLength = this.options.breakpointLowerbound;
-		this._unitValue = this.getBaseUnitValue();
+		// this._unitValue = this.getBaseUnitValue();
+		this._unitValue = this.computeBaseUnitValueAdjusted();
+		
 		if(this.options.zoomStep<=0){
 			throw new Error("Zoom step cannot be negative or zero");
 		}
@@ -101,6 +105,35 @@ export class NumberLine {
 	}
 	get displacement(): number {
 		return this._displacement;
+	}
+
+	get lowerBoundUnitLength(): number {
+		return this.options.breakpointLowerbound;
+	}
+
+	get upperBoundUnitLength(): number {
+		return this.options.breakpointUpperBound;
+	}
+
+	get zoomPeriod():number{
+		return this.options.zoomStep;
+	}
+
+	get zoomFactor():number{
+		return this.options.zoomFactor;
+	}
+
+	computeBaseUnitValueAdjusted():number{
+		const baseUnitValue = this.getBaseUnitValue();
+		const zoomFactor = this.zoomFactor;
+		const remainder = baseUnitValue % zoomFactor;
+		const lowerFactor = baseUnitValue - remainder;
+		const upperFactor = lowerFactor + zoomFactor;
+		return upperFactor;
+	}
+
+	private get baseUnitValueAdjusted():number{
+		return this._baseUnitValueAdjusted;
 	}
 
 	/**
@@ -187,6 +220,30 @@ export class NumberLine {
 		return this._unitValue/this._unitLength * length;
 	}
 
+	/**
+	 * Fits a given range to the length of the number line
+	 * @param start The starting value
+	 * @param end The ending value
+	 * @param length The length within which the range fits
+	 */
+	rangeFit(start:number,end:number,length:number):void{
+		if(end<start){
+			const temp = end;
+			end = start;
+			start = temp;
+		}
+		const rangeMeasure = end - start;
+		// find the ratio of unit value to unit length
+		const ratio = rangeMeasure/length;
+		// we know the lower and upper bounds of unit length
+		const lowerUnitValue = ratio * this.lowerBoundUnitLength;
+		const upperUnitValue = ratio * this.upperBoundUnitLength;
+		// we pick a value between the lower and upper bounds of the
+		// unit value such that it is perfectly divisible by zoom factor
+		const middleUnitValue = divisorBetween(lowerUnitValue,upperUnitValue,this.zoomPeriod);
+		
+	}
+
 	/** Number of tick marks in a unit */
 	get tickCount():number{
 		return this.options.pattern.length;
@@ -267,6 +324,43 @@ export class NumberLine {
 		}
 
 		return numberLineViewModel;
+	}
+}
+
+/**
+ * Given 2 numbers, find the first number that fits between those two numbers,
+ * and is divisible by a 3rd number. 
+ * This method can never truly work all the time if the parameters are invalid
+ * @param a The first smaller number
+ * @param b The second larger number
+ * @param c The third number
+ * @return The first number that fits between a and b and is divisible by c
+ */
+export function divisorBetween(a: number, b: number, c: number): number {
+	
+	if(b<a){
+		return divisorBetween(b,a,c);
+	}
+
+	const remainder = a % c;
+
+	if(remainder==0){
+		return a;
+	}else if(a==b){
+		return a;
+	}else{
+		
+		const remainder = (b-a) % c;
+		if(remainder==0){
+			return c;
+		}
+		
+		if(c>a){
+			return remainder + a;
+		}else{
+			const multiplier = Math.ceil(a/c);
+			return multiplier * c;
+		}
 	}
 }
 

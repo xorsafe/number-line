@@ -1,4 +1,4 @@
-import { INumberLineOptions, ITickMarkLabelStrategy, NumberLine, rangeMapper, sawtooth, doubleOriginStaircase } from "./number-line";
+import { INumberLineOptions, ITickMarkLabelStrategy, NumberLine, rangeMapper, sawtooth, doubleOriginStaircase, divisorBetween } from "./number-line";
 
 
 describe("Utility",()=>{
@@ -31,6 +31,15 @@ describe("Utility",()=>{
 
 		const y5 = doubleOriginStaircase(-105,10,50);
 		expect(y5).toBeCloseTo(-30,1);
+	})
+
+	it("should find the first number that is divisible by another number and fits between 2 numbers",()=>{
+		expect(divisorBetween(2,6,3)).toBe(3);
+		expect(divisorBetween(2,6,4)).toBe(4);
+		expect(divisorBetween(30,60,5)).toBe(30);
+		expect(divisorBetween(27,60,5)).toBe(30);
+		expect(divisorBetween(24,60,5)).toBe(25);
+		expect(divisorBetween(6,9,4)).toBe(8);
 	})
 })
 
