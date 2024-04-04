@@ -1,4 +1,4 @@
-import { INumberLineOptions, ITickMarkLabelStrategy, NumberLine, rangeMapper, sawtooth, staircase, divisorBetween } from "./number-line";
+import { INumberLineOptions, ITickMarkLabelStrategy, NumberLine, rangeMapper, sawtooth, staircase, divisorBetween, nextDivisibleValue } from "./number-line";
 
 
 describe("Utility",()=>{
@@ -27,10 +27,10 @@ describe("Utility",()=>{
 
 		// negative values
 		const y4 = staircase(-5,10,50);
-		expect(y4).toBeCloseTo(-10,1);
+		expect(y4).toBeCloseTo(10,1);
 
 		const y5 = staircase(-105,10,50);
-		expect(y5).toBeCloseTo(-30,1);
+		expect(y5).toBeCloseTo(30,1);
 	})
 
 	it("should find the first number that is divisible by another number and fits between 2 numbers",()=>{
@@ -40,6 +40,21 @@ describe("Utility",()=>{
 		expect(divisorBetween(27,60,5)).toBe(30);
 		expect(divisorBetween(24,60,5)).toBe(25);
 		expect(divisorBetween(6,9,4)).toBe(8);
+	})
+
+	it("should compute the next divisible value",()=>{
+		expect(nextDivisibleValue(2,7)).toBe(7);
+		expect(nextDivisibleValue(3,7)).toBe(7);
+		expect(nextDivisibleValue(4,7)).toBe(7);
+		expect(nextDivisibleValue(5,7)).toBe(7);
+		expect(nextDivisibleValue(6,7)).toBe(7);
+		expect(nextDivisibleValue(7,7)).toBe(14);
+		expect(nextDivisibleValue(8,7)).toBe(14);
+		expect(nextDivisibleValue(9,7)).toBe(14);
+		expect(nextDivisibleValue(10,7)).toBe(14);
+		expect(nextDivisibleValue(11,7)).toBe(14);
+		expect(nextDivisibleValue(12,7)).toBe(14);
+		expect(nextDivisibleValue(13,7)).toBe(14);
 	})
 })
 
@@ -59,8 +74,6 @@ describe("Number Line",()=>{
 		pattern:[3,1,1,1,1,2,1,1,1,1],
 		breakpointLowerbound:100,
 		breakpointUpperBound:150,
-		baseCoverage:1000,
-		baseLength:100,
 		labelStrategy:labelStrategy
 	}
 
@@ -68,13 +81,8 @@ describe("Number Line",()=>{
 		const clonedOptions = clone(defaultOptions);
 		clonedOptions.zoomFactor = 7;
 		clonedOptions.zoomPeriod = 10;
-		clonedOptions.baseCoverage = 4000;
-		clonedOptions.baseLength = 50;
 		clonedOptions.initialMagnification = 110;
 		const numberLine = new NumberLine(clonedOptions);
-		expect(numberLine.getBaseUnitValue()).toBe(80);
-		expect(numberLine.computeBaseUnitValueAdjusted()).toBe(84);
-		expect(numberLine.baseUnitValueAdjusted).toBe(84);
 		expect(numberLine.magnification).toBe(110);
 		expect(numberLine.unitValue).toBe(84);
 	})
@@ -458,10 +466,8 @@ describe("Number Line",()=>{
 function clone(options:INumberLineOptions):INumberLineOptions{
 	const clone:INumberLineOptions={
 		pattern:options.pattern,
-		baseCoverage:options.baseCoverage,
 		breakpointLowerbound:options.breakpointLowerbound,
 		breakpointUpperBound:options.breakpointUpperBound,
-		baseLength:options.baseLength,
 		labelStrategy:options.labelStrategy
 	}
 	return clone;

@@ -15,8 +15,6 @@ const defaultOptions:INumberLineOptions={
 	pattern:[3,1,1,1,1,2,1,1,1,1],
 	breakpointLowerbound:100,
 	breakpointUpperBound:150,
-	baseCoverage:1000,
-	baseLength:100,
 	labelStrategy:labelStrategy
 }
 

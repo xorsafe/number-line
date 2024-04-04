@@ -6,14 +6,7 @@ export interface INumberLineOptions {
 	 * that has a length. The array must have at least one item.
 	 */
 	pattern: number[];
-	/** Base value of the number line for the area covered by {@link baseLength} */
-	baseCoverage: number;
-	/** 
-	 * Length of the number line basis which all calculations are performed.
-	 * Note that the number line is virtually infinite but {@link baseLength}
-	 * along with {@link baseCoverage} governs the starting scale
-	 */
-	baseLength: number;
+	
 	/** 
 	 * The speed with which the number line magnifies. Higher number means slower
 	 * Negative number or zero not allowed.
@@ -59,7 +52,7 @@ export class NumberLine {
 	private _displacement: number;
 	private _biggestTickPatternValue: number;
 
-	private _baseUnitValueAdjusted: number;
+	
 
 	constructor(private options: INumberLineOptions) {
 		this.initialize();
@@ -70,8 +63,6 @@ export class NumberLine {
 			throw new Error("Breakpoint lower bound cannot be greater than breakpoint upper bound");
 		}
 		this._unitLength = this.options.breakpointLowerbound;
-		// this._unitValue = this.getBaseUnitValue();
-		this._baseUnitValueAdjusted = this.computeBaseUnitValueAdjusted();
 		if(this.options.zoomPeriod<=0){
 			throw new Error("Zoom step cannot be negative or zero");
 		}
@@ -83,10 +74,6 @@ export class NumberLine {
 		this.options.zoomFactor = this.options.zoomFactor || 1;
 		this.zoomTo(this.options.initialMagnification || 0);
 		this.panTo(this.options.initialDisplacement || 0);
-	}
-
-	getBaseUnitValue(): number {
-		return this.options.baseCoverage / this.options.baseLength;
 	}
 
 	get biggestTickPatternValue():number{
@@ -122,18 +109,8 @@ export class NumberLine {
 		return this.options.zoomFactor;
 	}
 
-	computeBaseUnitValueAdjusted():number{
-		const baseUnitValue = this.getBaseUnitValue();
-		const zoomFactor = this.zoomFactor;
-		const remainder = baseUnitValue % zoomFactor;
-		const lowerFactor = baseUnitValue - remainder;
-		const upperFactor = lowerFactor + zoomFactor;
-		return upperFactor;
-	}
+	
 
-	get baseUnitValueAdjusted():number{
-		return this._baseUnitValueAdjusted;
-	}
 
 	/**
 	 * Zooms the number line to the specified magnification
@@ -145,14 +122,6 @@ export class NumberLine {
 		this._magnification = magnification;
 		this._unitLength = sawtooth(magnification, this.options.breakpointLowerbound, this.options.breakpointUpperBound, this.options.zoomPeriod);
 		this._unitValue = staircase(magnification, this.options.zoomFactor, this.options.zoomPeriod);
-		
-		// if(level==0){
-		// 	this._unitValue = this.getBaseUnitValue();
-		// }else if(level>0){
-		// 	this._unitValue = this.getBaseUnitValue() / level;
-		// }else{
-		// 	this._unitValue = this.getBaseUnitValue() * Math.abs(level);
-		// }
 	}
 
     /**
@@ -329,6 +298,19 @@ export class NumberLine {
 }
 
 /**
+ * Computes the next biggest number divisible by a given denominator
+ * @param numerator The value that should be divisible
+ * @param denominator The value to be divisible by
+ * @returns The next biggest number divisible by the denominator
+ */
+export function nextDivisibleValue(numerator:number, denominator:number):number{
+	const remainder = numerator % denominator;
+	const lowerFactor = numerator - remainder;
+	const upperFactor = lowerFactor + denominator;
+	return upperFactor;
+}
+
+/**
  * Given 2 numbers, find the first number that fits between those two numbers,
  * and is divisible by a 3rd number. 
  * This method can never truly work all the time if the parameters are invalid
@@ -392,14 +374,6 @@ export function sawtooth(x: number, lowerBound: number, upperBound: number, peri
  * @return {number} The y-coordinate of the point on the staircase.
  */
 export function staircase(x: number, height: number, period: number): number {
-	// let steps:number = 0;
-	// if (x == 0) {
-	// 	return 0;
-	// }else if(x > 0){
-	// 	steps = Math.floor(x / period)+1;
-	// }else{
-	// 	steps = Math.floor(x / period);
-	// }
 	const steps = Math.floor(Math.abs(x) / period)+1;
 	const y = steps * height;
 	return y;
