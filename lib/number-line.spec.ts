@@ -1,4 +1,4 @@
-import { INumberLineOptions, ITickMarkLabelStrategy, NumberLine, rangeMapper, sawtooth, staircase, divisorBetween, nextDivisibleValue } from "./number-line";
+import { INumberLineOptions, ITickMarkLabelStrategy, NumberLine, rangeMapper, sawtooth, staircase, divisorBetween, nextDivisibleValue, clamp } from "./number-line";
 
 
 describe("Utility",()=>{
@@ -48,20 +48,29 @@ describe("Utility",()=>{
 		expect(nextDivisibleValue(4,7)).toBe(7);
 		expect(nextDivisibleValue(5,7)).toBe(7);
 		expect(nextDivisibleValue(6,7)).toBe(7);
-		expect(nextDivisibleValue(7,7)).toBe(14);
+		expect(nextDivisibleValue(7,7)).toBe(7);
 		expect(nextDivisibleValue(8,7)).toBe(14);
 		expect(nextDivisibleValue(9,7)).toBe(14);
 		expect(nextDivisibleValue(10,7)).toBe(14);
 		expect(nextDivisibleValue(11,7)).toBe(14);
 		expect(nextDivisibleValue(12,7)).toBe(14);
 		expect(nextDivisibleValue(13,7)).toBe(14);
+
+		expect(nextDivisibleValue(2,1)).toBe(2);
+	})
+
+	it("should clamp a number within range",()=>{
+		expect(clamp(5,0,10)).toBe(5);
+		expect(clamp(15,0,10)).toBe(10);
+		expect(clamp(-1,0,10)).toBe(0);
+		expect(clamp(-5,0,10)).toBe(0);
 	})
 })
 
 describe("Number Line",()=>{
 
 	const labelStrategy:ITickMarkLabelStrategy={
-		labelFor:(value,index,position, numberLine)=>{
+		labelFor:(value:number,index:number,position:number, numberLine:NumberLine)=>{
 			if(index%5==0){
 				// return value in string to just on precision on floating point
 				return value.toFixed(0);
@@ -458,6 +467,51 @@ describe("Number Line",()=>{
 			}
 		}
 		
+	})
+
+	it('should range fit within a given length',()=>{
+		const clonedOptions = clone(defaultOptions);
+		const numberLine = new NumberLine(clonedOptions);
+		const [magnification,displacement]=numberLine.rangeFit(5,25,1000);
+		expect(magnification).toBe(10);
+		numberLine.zoomTo(magnification);
+		numberLine.panTo(displacement);
+
+		const viewModel = numberLine.buildViewModel(1000);
+
+		expect(viewModel.length).toBe(1000);
+		expect(viewModel.offset).toBe(0);
+		expect(viewModel.startingValue).toBe(5);
+		expect(viewModel.endingValue).toBe(25);
+		expect(numberLine.unitLength).toBe(100);
+		expect(numberLine.unitValue).toBe(2);
+
+	})
+
+	it('should range fit within a given length for an impossible unit length by containing it',()=>{
+		const clonedOptions = clone(defaultOptions);
+		const numberLine = new NumberLine(clonedOptions);
+		const [magnification,displacement]=numberLine.rangeFit(5,25,1000,130);
+		expect(magnification).toBe(26);
+		numberLine.zoomTo(magnification);
+		numberLine.panTo(displacement);
+
+		const viewModel = numberLine.buildViewModel(1000);
+
+		expect(viewModel.length).toBe(1000);
+		expect(viewModel.startingValue).toBe(5);
+		expect(numberLine.unitLength).toBe(130);
+		expect(numberLine.unitValue).toBe(3);
+		// it doesn't make the full range so it gives the next best thing
+		expect(viewModel.endingValue).toBeCloseTo(28.0769,0.0001);
+
+	})
+
+	it('should check if range is fittable within a given length',()=>{
+		const clonedOptions = clone(defaultOptions);
+		const numberLine = new NumberLine(clonedOptions);
+		expect(numberLine.isRangeFittable(5,25,1000)).toBe(true);
+		expect(numberLine.isRangeFittable(5,25,1000,130)).toBe(false);
 	})
 
 

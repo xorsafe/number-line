@@ -189,27 +189,77 @@ export class NumberLine {
 		return this._unitValue/this._unitLength * length;
 	}
 
+	get smallestPossibleUnitValue():number{
+		return this.zoomFactor;
+	}
 	/**
-	 * Fits a given range to the length of the number line
+	 * Checks if a range can fit within a given length or not. If it is you can
+	 * use {@link rangeFit } method to find the magnification and displacement
 	 * @param start The starting value
 	 * @param end The ending value
 	 * @param length The length within which the range fits
+	 * @param forUnitLength The unit length clamped within bounds for which the range should fit. 
+	 * If unspecified, lowerbound will be used.
+	 * @returns True if it is possible to fit the range, false otherwise
 	 */
-	rangeFit(start:number,end:number,length:number):void{
+	isRangeFittable(start: number, end: number, length: number, forUnitLength?: number): boolean {
 		if(end<start){
 			const temp = end;
 			end = start;
 			start = temp;
 		}
+		const targetUnitLength = forUnitLength==undefined ? this.lowerBoundUnitLength : clamp(forUnitLength,this.lowerBoundUnitLength,this.upperBoundUnitLength);
 		const rangeMeasure = end - start;
 		// find the ratio of unit value to unit length
 		const ratio = rangeMeasure/length;
 		// we know the lower and upper bounds of unit length
-		const lowerUnitValue = ratio * this.lowerBoundUnitLength;
-		const upperUnitValue = ratio * this.upperBoundUnitLength;
-		// we pick a value between the lower and upper bounds of the
-		// unit value such that it is perfectly divisible by zoom factor
-		const middleUnitValue = divisorBetween(lowerUnitValue,upperUnitValue,this.zoomPeriod);
+		const lowerUnitValue = ratio * targetUnitLength;
+		return lowerUnitValue % this.zoomFactor == 0;
+	}
+
+	/**
+	 * Computes the magnification and pan that fits a given range in a given length.
+	 * This method does not alter the currect pan or zoom configurations.
+	 * Keep in mind that because unit values are not incremented in a continious fasion(they follow staircase curve),
+	 * it is impossible to mathmatically fit a range in a given length, 
+	 * if resulting unit value is not perfectly a multiple of zoom factor.
+	 * Nevertheless this algorithm will return the next best zoom and pan that best contains the range in the given length.
+	 * You can also check if the range is fittable using {@link isRangeFittable } method.
+	 * @param start The starting value
+	 * @param end The ending value
+	 * @param length The length within which the range fits
+	 * @param forUnitLength The unit length clamped within bounds for which the range should fit. 
+	 * If unspecified, lowerbound will be used.
+	 * @returns A tuple containing magnification and displacement that can be used to zoom and pan the number line. 
+	 * You can either do it immediately or you can animate it in your UI ;-).
+	 */
+	rangeFit(start:number,end:number,length:number,forUnitLength?:number):[number,number]{
+		if(end<start){
+			const temp = end;
+			end = start;
+			start = temp;
+		}
+		const targetUnitLength = forUnitLength==undefined ? this.lowerBoundUnitLength : clamp(forUnitLength,this.lowerBoundUnitLength,this.upperBoundUnitLength);
+		const rangeMeasure = end - start;
+		// find the ratio of unit value to unit length
+		const ratio = rangeMeasure/length;
+		// we know the lower and upper bounds of unit length
+		const lowerUnitValue = ratio * targetUnitLength;
+		// const divisibleByZoomFactor = nextDivisibleValue(lowerUnitValue,this.zoomFactor);
+		const divisibleByZoomFactor = lowerUnitValue % this.zoomFactor == 0 ?
+		previousDivisibleValue(lowerUnitValue,this.zoomFactor) :
+		nextDivisibleValue(lowerUnitValue,this.zoomFactor);
+		const magnificationBase = ((divisibleByZoomFactor/this.zoomFactor)-1) * this.zoomPeriod;
+		const magnificationOffset = this.zoomPeriod * (targetUnitLength - this.lowerBoundUnitLength)/(this.upperBoundUnitLength-this.lowerBoundUnitLength);
+		const magnification = magnificationBase + magnificationOffset;
+		// we can't use positionOf method because, the changes haven't been applied to the number line yet
+		// const displacement = this.positionOf(start);
+		// therefore we calculate it inline here manually
+		// position = displacement + (unitLength/unitValue) * starting value;
+		// find the unit value obtained from the given magnification
+		const derivedUnitValue = staircase(magnification, this.zoomFactor, this.zoomPeriod);
+		const displacement = targetUnitLength/derivedUnitValue * start;
+		return [magnification,displacement];
 		
 	}
 
@@ -298,6 +348,22 @@ export class NumberLine {
 }
 
 /**
+ * Returns a number whose value is limited to the given range.
+ *
+ * Example: limit the output of this computation to between 0 and 255
+ * (x * 255).clamp(0, 255)
+ *
+ * @param {number} value The value to clamp
+ * @param {number} min The lower boundary of the output range
+ * @param {number} max The upper boundary of the output range
+ * @returns A number in the range [min, max]
+ * @type Number
+ */
+export function clamp(value:number,min:number, max:number){
+	return Math.min(Math.max(value, min), max);
+};
+
+/**
  * Computes the next biggest number divisible by a given denominator
  * @param numerator The value that should be divisible
  * @param denominator The value to be divisible by
@@ -305,10 +371,24 @@ export class NumberLine {
  */
 export function nextDivisibleValue(numerator:number, denominator:number):number{
 	const remainder = numerator % denominator;
+	if(remainder==0){
+		return numerator;
+	}
 	const lowerFactor = numerator - remainder;
 	const upperFactor = lowerFactor + denominator;
 	return upperFactor;
 }
+
+/**
+ * Computes the previous smallest number divisible by a given denominator
+ * @param numerator The value that should be divisible
+ * @param denominator The value to be divisible by
+ * @returns The previous smallest number divisible by the denominator
+ */
+export function previousDivisibleValue(numerator:number, denominator:number):number{
+	return Math.floor(numerator/denominator);
+}
+
 
 /**
  * Given 2 numbers, find the first number that fits between those two numbers,
