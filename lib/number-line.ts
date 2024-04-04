@@ -15,11 +15,11 @@ export interface INumberLineOptions {
 	 */
 	baseLength: number;
 	/** 
-	 * The speed with which the number line magnifies.
+	 * The speed with which the number line magnifies. Higher number means slower
 	 * Negative number or zero not allowed.
 	 * @default 10
 	 */
-	zoomStep?: number;
+	zoomPeriod?: number;
 	/** 
 	 * The amount by which unit length is increased or decreased with changes in magnification.
 	 * Must be greater than 0.
@@ -71,22 +71,21 @@ export class NumberLine {
 		}
 		this._unitLength = this.options.breakpointLowerbound;
 		// this._unitValue = this.getBaseUnitValue();
-		this._unitValue = this.computeBaseUnitValueAdjusted();
-		
-		if(this.options.zoomStep<=0){
+		this._baseUnitValueAdjusted = this.computeBaseUnitValueAdjusted();
+		if(this.options.zoomPeriod<=0){
 			throw new Error("Zoom step cannot be negative or zero");
 		}
 		if(this.options.zoomFactor<=0){
 			throw new Error("Zoom factor cannot be negative or zero");
 		}
 		this._biggestTickPatternValue = this.options.pattern.reduce((a, b) => Math.max(a, b), 0);
-		this.options.zoomStep = this.options.zoomStep || 10;
+		this.options.zoomPeriod = this.options.zoomPeriod || 10;
 		this.options.zoomFactor = this.options.zoomFactor || 1;
 		this.zoomTo(this.options.initialMagnification || 0);
 		this.panTo(this.options.initialDisplacement || 0);
 	}
 
-	private getBaseUnitValue(): number {
+	getBaseUnitValue(): number {
 		return this.options.baseCoverage / this.options.baseLength;
 	}
 
@@ -116,7 +115,7 @@ export class NumberLine {
 	}
 
 	get zoomPeriod():number{
-		return this.options.zoomStep;
+		return this.options.zoomPeriod;
 	}
 
 	get zoomFactor():number{
@@ -132,7 +131,7 @@ export class NumberLine {
 		return upperFactor;
 	}
 
-	private get baseUnitValueAdjusted():number{
+	get baseUnitValueAdjusted():number{
 		return this._baseUnitValueAdjusted;
 	}
 
@@ -144,15 +143,16 @@ export class NumberLine {
 	 */
 	zoomTo(magnification: number):void {
 		this._magnification = magnification;
-		this._unitLength = sawtooth(magnification, this.options.breakpointLowerbound, this.options.breakpointUpperBound, this.options.zoomStep);
-		const level = doubleOriginStaircase(magnification, this.options.zoomFactor, this.options.zoomStep);
-		if(level==0){
-			this._unitValue = this.getBaseUnitValue();
-		}else if(level>0){
-			this._unitValue = this.getBaseUnitValue() / level;
-		}else{
-			this._unitValue = this.getBaseUnitValue() * Math.abs(level);
-		}
+		this._unitLength = sawtooth(magnification, this.options.breakpointLowerbound, this.options.breakpointUpperBound, this.options.zoomPeriod);
+		this._unitValue = staircase(magnification, this.options.zoomFactor, this.options.zoomPeriod);
+		
+		// if(level==0){
+		// 	this._unitValue = this.getBaseUnitValue();
+		// }else if(level>0){
+		// 	this._unitValue = this.getBaseUnitValue() / level;
+		// }else{
+		// 	this._unitValue = this.getBaseUnitValue() * Math.abs(level);
+		// }
 	}
 
     /**
@@ -310,6 +310,7 @@ export class NumberLine {
 					value:currentTickValue,
 					position:currentTickPosition,
 					height:this.options.pattern[currentTickIndex],
+					patternIndex:currentTickIndex,
 					label:this.options.labelStrategy!=null?
 						this.options.labelStrategy.labelFor(
 							currentTickValue,
@@ -383,23 +384,23 @@ export function sawtooth(x: number, lowerBound: number, upperBound: number, peri
 
 /**
  * Calculates the y-coordinate of a point on a staircase based on the given x-coordinate, height, and period.
- * The staircase function has two levels of height at origin.
- * One in the positive y axis and one in the negative y axis.
+ * Only the positive x-coordinate is supported.
  *
  * @param {number} x - The x-coordinate of the point.
  * @param {number} height - The height of each step on the staircase.
  * @param {number} period - The period of the staircase.
  * @return {number} The y-coordinate of the point on the staircase.
  */
-export function doubleOriginStaircase(x: number, height: number, period: number): number {
-	let steps:number = 0;
-	if (x == 0) {
-		return 0;
-	}else if(x > 0){
-		steps = Math.floor(x / period)+1;
-	}else{
-		steps = Math.floor(x / period);
-	}
+export function staircase(x: number, height: number, period: number): number {
+	// let steps:number = 0;
+	// if (x == 0) {
+	// 	return 0;
+	// }else if(x > 0){
+	// 	steps = Math.floor(x / period)+1;
+	// }else{
+	// 	steps = Math.floor(x / period);
+	// }
+	const steps = Math.floor(Math.abs(x) / period)+1;
 	const y = steps * height;
 	return y;
 }
@@ -457,6 +458,8 @@ export interface TickMarkViewModel {
 	height: number;
 	/** Label on the tick mark as directly received from {@link ITickMarkLabelStrategy} */
 	label: string;
+	/** Index from the tick mark pattern */
+	patternIndex:number;
 	/** Value of this tick mark */
 	value: number;
 	/** Position of this tick mark from the start */
