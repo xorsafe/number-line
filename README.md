@@ -1,3 +1,6 @@
+### Important Note
+Currently this library is undergoing some massive (good) changes.It will be ready soon.
+
 # Number Line
 A dependency less, typescript based, flexible and functional number line. Stretch it, zoom it, shift it and use it to find values.
 
