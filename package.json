@@ -1,6 +1,6 @@
 {
   "name": "number-line",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "A customizable & virtually inifinite number line that can be used by any renderer",
   "source": "src/number-line.ts",
   "main": "dist/main.js",
