@@ -1,6 +1,3 @@
-### Important Note
-Currently this library is undergoing some massive (good) changes.It will be ready soon.
-
 # Number Line
 A dependency less, typescript based, flexible and functional number line. Stretch it, zoom it, shift it and use it to find values.
 
@@ -55,6 +52,10 @@ Keep in mind, the number line only describes 1 axis, so every axis needs its own
 Making a simple number line is not hard but I think making a customizable and interactive number line is tricky and I hope this library saves some precious hours for another soul.
 
 ## Getting Started
+
+### Important Note
+Currently this library is undergoing some massive changes.It will be ready soon. The following is a developer preview but the latest updates haven'
+t been published on NPM.
 
 ```
 npm install number-line
