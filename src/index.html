@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Number Line</title>
+	<script type="module" src="main.ts"></script>
+	<link rel="stylesheet" href="./index.scss" />
+</head>
+
+<body class="h-full">
+	<div id="app"></div>
+	<header class="w-full h-96 bg-slate-800 text-white flex justify-center items-center text-6xl">Number Lines</header>
+	<main class="flex flex-col gap-10 mt-10">
+		<section class="text-center">
+			<h1>Drag to pan the number line with your mouse(or touch)</h1>
+			<div id="pan" class="cursor-grab active:cursor-grabbing"></div>
+		</section>
+		<section class="text-center">
+			<h1>Use pinch to zoom gesture on the number line to zoom around a position. Alternatively press CMD/Ctrl mouse wheel</h1>
+			<div id="positional-zoom" class="cursor-grab active:cursor-grabbing"></div>
+		</section>
+		<section class="text-center">
+			<h1>Jump to zoom directly jumps to a zoom percentage of the number line</h1>
+			<div id="jump-to-zoom"></div>
+		</section>
+		<section class="text-center">
+			<h1>Zoom to fit captures a defined scoped area of the number line</h1>
+			<div id="zoom-to-fit"></div>
+		</section>
+		<section class="text-center flex flex-row items-center justify-center gap-6">
+			<a href="https://github.com/nikhilnxvverma1/number-line?tab=readme-ov-file"><h1 class="underline text-blue-400">Github</h1></a>
+			<a href="https://github.com/nikhilnxvverma1/number-line?tab=readme-ov-file#number-line"><h1 class="underline text-blue-400">Documentation</h1></a>
+			
+		</section>
+	</main>
+	<!-- <footer class="w-full h-10 flex justify-center text-white bg-slate-800 items-center absolute bottom-0">Made with love in India (<a href="https://github.com/nikhilnxvverma1">Nikhil Verma</a>)</footer> -->
+</body>
+
+</html>

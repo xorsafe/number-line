@@ -20,13 +20,15 @@ _Number Lines js_ aims to be a nifty feature rich utility for anyone looking for
 * Get length for value
 * ViewModel for rendering purposes(more on that later)
 
-Besides this, the library, is well tested, well documented, pure vanilla typescript code with no external dependencies. Almost all operations in the main class execute in O(1) time. Stretch to fit and range to fit are approximation based calculations that probably finish in O(log(n)) time. (PS: If anyone has a better solution for stretchToFit, do let me know. Thanks)
+Besides this, the library, is well tested, well documented, pure vanilla typescript code with no external dependencies.All operations in the main class execute in O(1) time. Building the view model takes O(n) time.
 
 ## But wait, where is the rendering code?
 
-Exactly! This utility is designed to be a number crunching system. It doesn't do any rendering itself. Instead it gives you an idea as to what the number line looks like. In Software Engineering, a ViewModel is a term used to describe how a view should be drawn. 
+There exists a **sample** vanilla html renderer code in ```html-renderer.ts```. Its pure typescript and has no dependency on any third party CSS libraries or frontend framework. But that code is merely a sample of how to implement a renderer. You are more than encouraged to **copy, modify or use or own renderer**.
 
-Drawing the number line itself is not a very hard task if you have all the information. The NumberLine class exposes a method that outputs a NumberLineViewModel class in linear time that can be used to draw the number line using any format or technology. You can use HTML, SVG or your favorite Canvas library.
+This utility is designed to be a **number crunching system**. It doesn't do any rendering itself. Instead it gives you an idea as to what the number line looks like. In Software Engineering, a ViewModel is a term used to describe how a view should be drawn. 
+
+Drawing the number line itself is not a very hard task if you have all the information. The NumberLine class exposes a method that outputs a ```NumberLineViewModel``` class in linear time that can be used to draw the number line using any format or technology. You can **use HTML, SVG or your favorite Canvas library**.
 
 The construction of NumberLineViewModel will invoke your ITickMarkLabelStrategy to label the ticks as per your formatting needs. NumberLineViewModel will also tell you how tall each tick mark is, its associated tick label and gapping between tick marks. All this informaiton is computed from the tickMarkPattern array that you supply as part of the initialization process.
 
@@ -51,28 +53,39 @@ Making a simple number line is not hard but I think making a customizable and in
 
 ## Getting Started
 
+### Important Note
+Currently this library is undergoing some massive changes.It will be ready soon. The following is a developer preview but the latest updates haven'
+t been published on NPM.
+
 ```
-npm install numberline
+npm install number-line
 ```
 
 ```
 import { NumberLine, NumberLineViewModel } from 'number-line';
+import { render } from "number-line/html-renderer";
 
-const numberLine = new NumberLine({
-			pattern:[3,1,1,1,1,2,1,1,1,1],
-			breakpointLowerbound:5,
-			breakpointUpperBound:11.5,
-			baseCoverage:100,
-			baseLength:100,
-			labelStrategy:{
-				labelFor(value:number,index:number,pattern:number,numberLine:NumberLine):string{
-					if(index==0){
-						return `${value}`;
-					}
-					return null;
-				}
-			}
-		})
+const labelStrategy:ITickMarkLabelStrategy={
+	labelFor:(value,index,position, numberLine)=>{
+		if(index%5==0){
+			// return value in string to just on precision on floating point
+			return value.toFixed(0);
+		}
+		return null;
+	}
+	
+}
+const numberLineOptions:INumberLineOptions={
+	pattern:[3,1,1,1,1,2,1,1,1,1],
+	breakpointLowerbound:100,
+	breakpointUpperBound:150,
+	labelStrategy:labelStrategy
+}
+
+
+const myNumberLine = new NumberLine(numberLineOptions);
+const myDiv = document.querySelector("#my-element") as HTMLElement;
+render(myNumberLine,myDiv);
 ```
 
 ## Known limitations
