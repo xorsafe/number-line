@@ -6,6 +6,14 @@ If you have ever used a graphic program like Photoshop or Sketch, you would have
 
 _Number Lines js_ aims to be a nifty feature rich utility for anyone looking for building this pesky detail.
 
+## 2D Axis by iterating over the view model
+
+![2 number lines making up a 2d axis(.npmignored for size budget considerations, please go to the git repo)](ruler-2d-preview.gif)
+
+## CSS based grid using number line for all the pattern values
+
+![Grid based 2 number lines using pure CSS(.npmignored for size budget considerations, please go to the git repo)](grid-2d-preview.gif)
+
 ## Features
 
 * Virtually infinite number line
@@ -111,3 +119,51 @@ Yes. I am personally using it with Angular. I wanted the number line to be fully
 ### But my number line needs to have XYZ features in it
 
 In software engineering, _composition_ is the art of wrapping an idea in a bigger idea and building on top of it. Food for thought!
+
+### How can I create a pure CSS driven grid lines that is responsive to all the zooming and panning from the number lines?
+
+This requires creating 2 number lines. One for x axis and the other for y axis. You then create a div container background with the following CSS properties: 
+
+``` scss
+$major-grid-line-color:rgba(70, 70, 70,0.2);
+$minor-grid-line-color:rgb(45, 45, 45,0.2);
+
+.grid-lines-container{
+	margin:0;
+    background-color: #0a203a;
+    background-image: linear-gradient($major-grid-line-color 2px, transparent 2px), linear-gradient(90deg, $major-grid-line-color 2px, transparent 2px), linear-gradient($minor-grid-line-color 1px, transparent 1px), linear-gradient(90deg, $minor-grid-line-color 1px, transparent 1px);
+    background-repeat: repeat;
+    width: 100%;
+    height: 100%;
+	box-sizing:border-box;
+}
+```
+
+There is a lot going on in the above code, but the main property is the __background-image__ property along with __background-repeat__. The combination of these 2 properties creates a repeating pattern on the container where each cell is controlable. 
+
+To control the pan of the grid procedurally, we set the following style on the container:
+
+```javascript
+container.style.background-position-x.px="panX"
+container.style.background-position-y.px="panY"
+```
+where panX and panY are obtained from the number line
+
+To control the size of each cell (as a result of zooming) we use the following properties on the container:
+```javascript
+
+container.style.background-size="backgroundSizeStyleCover"
+```
+where ```backgroundSizeStyleCover``` is a result of each number line's cell size and can be obtained by:
+
+```typescript
+get backgroundSizeStyleCover():string{
+		const cell = xAxis.unitLength;
+		const subCell = (cell / 10);// in our case, we chose to divide each unit into 10 steps
+
+		// the following is the background-size syntax that can be set in conjunction with background-image
+		return `${cell}px ${cell}px, ${cell}px ${cell}px, ${subCell}px ${subCell}px, ${subCell}px ${subCell}px`;
+	}
+```
+
+Note that in the above case we are assuming that both x and y axis zoom at the same rate and have the same scale(which is why we are using the x axis along. If your grid is uneven, you will want to adjust accordingly ensuring the cell size is approriate for that axis)

@@ -1,3 +1,5 @@
 node_modules
 .parcel-cache
 *.tgz
+ruler-2d-preview.gif
+grid-2d-preview.gif
