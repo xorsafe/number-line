@@ -1,10 +1,9 @@
 {
   "name": "number-line",
-  "version": "2.0.2",
+  "version": "2.0.5",
   "description": "A customizable & virtually inifinite number line that can be used by any renderer",
-  "source": "src/number-line.ts",
-  "main": "dist/main.js",
-  "module": "dist/number-line.js",
+  "source": "lib/number-line.ts",
+  "main": "dist/number-line.js",
   "types": "dist/number-line.d.ts",
   "scripts": {
     "test": "jest",
